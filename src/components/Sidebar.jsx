@@ -28,8 +28,7 @@ const navLinks = {
     { label: "Dashboard", path: "/student", icon: "\u{1F3E0}", tooltip: "View your student dashboard" },
     { label: "My Programs", path: "/student/enrol", icon: "\u{1F4DA}", tooltip: "Browse and enrol in conservation programs" },
     { label: "My Work", path: "/student/sightings", icon: "\u{1F4DD}", tooltip: "Submit new conservation work" },
-    { label: "Past Submissions", path: "/student/past-submissions", icon: "\u{1F4CB}", tooltip: "View all your past submissions and feedback" },
-    { label: "Library", path: "/student/library", icon: "\u{1F4D6}", tooltip: "Browse your school's contribution library" },
+    { label: "School Library", path: "/student/library", icon: "\u{1F4D6}", tooltip: "Browse your school's contribution library" },
     { label: "Messages", path: "/student/messages", icon: "\u{2709}\uFE0F", tooltip: "Message your school teachers and classmates" },
     { label: "Species Quiz", path: "/student/quiz", icon: "🎮", tooltip: "Test your species knowledge" },
     { label: "My Canvas", path: "/student/profile", icon: "\u{1F3A8}", tooltip: "View your work canvas and portfolio" },
@@ -39,7 +38,7 @@ const navLinks = {
   teacher: [
     { label: "Dashboard", path: "/teacher", icon: "\u{1F3E0}", tooltip: "View your teacher dashboard" },
     { label: "Review Dashboard", path: "/teacher/library", icon: "\u{1F50D}", tooltip: "Review and manage student submissions" },
-    { label: "Sighting Reports", path: "/teacher/sightings", icon: "\u{1F4CB}", tooltip: "Review legacy sighting reports" },
+    { label: "School Library", path: "/teacher/school-library", icon: "\u{1F4D6}", tooltip: "Browse your school's contribution library" },
     { label: "Messages", path: "/teacher/messages", icon: "\u{2709}\uFE0F", tooltip: "Message students and principal at your school" },
     { label: "Settings", path: "/settings", icon: "\u{2699}\uFE0F", tooltip: "Profile settings" },
     { label: "Public Library", path: "/teacher/public-library", icon: "\u{1F30D}", tooltip: "Browse the public species library and showcase" },

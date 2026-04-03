@@ -23,7 +23,7 @@ import MemberProfile from "./pages/MemberProfile";
 import ProfileSettings from "./pages/ProfileSettings";
 import CommunityLibrary from "./pages/CommunityLibrary";
 import StudentDetail from "./pages/StudentDetail";
-import PastSubmissions from "./pages/PastSubmissions";
+import MyCanvas from "./pages/MyCanvas";
 import NotFound from "./pages/NotFound";
 import "./App.css";
 
@@ -112,8 +112,8 @@ export default function App() {
           path="/student/profile"
           element={
             <ProtectedRoute allowedRoles={["student"]}>
-              <DashboardLayout title="My Profile">
-                <StudentProfile />
+              <DashboardLayout title="My Canvas">
+                <MyCanvas />
               </DashboardLayout>
             </ProtectedRoute>
           }
@@ -141,16 +141,7 @@ export default function App() {
           }
         />
 
-        <Route
-          path="/student/past-submissions"
-          element={
-            <ProtectedRoute allowedRoles={["student"]}>
-              <DashboardLayout title="Past Submissions">
-                <PastSubmissions />
-              </DashboardLayout>
-            </ProtectedRoute>
-          }
-        />
+        {/* Removed deprecated PastSubmissions route -- now captured in MyCanvas */}
 
         <Route
           path="/student/quiz"
@@ -214,6 +205,17 @@ export default function App() {
             <ProtectedRoute allowedRoles={["teacher"]}>
               <DashboardLayout title="Messages">
                 <Messages />
+              </DashboardLayout>
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/teacher/school-library"
+          element={
+            <ProtectedRoute allowedRoles={["teacher"]}>
+              <DashboardLayout title="School Library">
+                <SchoolLibrary />
               </DashboardLayout>
             </ProtectedRoute>
           }
