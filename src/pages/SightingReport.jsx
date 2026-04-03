@@ -144,9 +144,9 @@ export default function SightingReport() {
         });
       }
 
-      // Redirect to Past Submissions page after successful submit
+      // Redirect to My Canvas page after successful submit
       const rolePrefix = userData?.role === "member" ? "/member" : "/student";
-      navigate(`${rolePrefix}/past-submissions`, {
+      navigate(`${rolePrefix}/profile`, {
         state: { successMessage: `${contributionType} submitted successfully! Your teacher will review it.` }
       });
     } catch (err) {
@@ -320,23 +320,6 @@ export default function SightingReport() {
           title="Submit your work for teacher review"
         >
           {submitting ? "Submitting..." : "Upload Work"}
-        </button>
-      </div>
-
-      <div className="sighting-history-card">
-        <h3>My Past Submissions</h3>
-        <p className="empty-text" style={{ marginBottom: "12px" }}>
-          You have {reports.length} submission{reports.length !== 1 ? "s" : ""}. View details and teacher feedback on your Past Submissions page.
-        </p>
-        <button
-          className="sighting-submit-btn"
-          style={{ background: "#1565c0" }}
-          onClick={() => {
-            const rolePrefix = userData?.role === "member" ? "/member" : "/student";
-            navigate(`${rolePrefix}/past-submissions`);
-          }}
-        >
-          View Past Submissions
         </button>
       </div>
     </div>

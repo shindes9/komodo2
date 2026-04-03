@@ -60,7 +60,6 @@ const navLinks = {
   member: [
     { label: "Dashboard", path: "/member", icon: "\u{1F3E0}", tooltip: "View your member dashboard" },
     { label: "My Contributions", path: "/member/sightings", icon: "\u{1F4DD}", tooltip: "Submit articles and sighting reports" },
-    { label: "Past Submissions", path: "/member/past-submissions", icon: "\u{1F4CB}", tooltip: "View all your past submissions and feedback" },
     { label: "Community Library", path: "/member/library", icon: "\u{1F4D6}", tooltip: "Browse your community's contribution library" },
     { label: "My Canvas", path: "/member/profile", icon: "\u{1F3A8}", tooltip: "View your public canvas" },
     { label: "Messages", path: "/member/messages", icon: "\u{2709}\uFE0F", tooltip: "Message community members" },

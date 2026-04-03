@@ -17,6 +17,7 @@ export default function MyCanvas() {
 
   const [contributions, setContributions] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [selectedSubmission, setSelectedSubmission] = useState(null);
 
   useEffect(() => {
     if (!user) return;
@@ -166,7 +167,20 @@ export default function MyCanvas() {
           ) : (
             <div className="canvas-grid">
               {contributions.map((c) => (
-                <div key={c.id} className="canvas-card">
+                <div 
+                  key={c.id} 
+                  className="canvas-card" 
+                  onClick={() => setSelectedSubmission(c)}
+                  style={{ cursor: "pointer", transition: "transform 0.2s, box-shadow 0.2s" }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.transform = "translateY(-4px)";
+                    e.currentTarget.style.boxShadow = "var(--shadow-md)";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.transform = "none";
+                    e.currentTarget.style.boxShadow = "var(--shadow-sm)";
+                  }}
+                >
                   <div className="canvas-card-top">
                     <div>
                       <div className="canvas-card-title">
@@ -209,6 +223,117 @@ export default function MyCanvas() {
           )}
         </div>
       </div>
+
+      {/* ── Submission Detail & Feedback Modal ── */}
+      {selectedSubmission && (
+        <div 
+          className="canvas-modal-overlay"
+          onClick={() => setSelectedSubmission(null)}
+          style={{
+            position: "fixed",
+            top: 0, left: 0, right: 0, bottom: 0,
+            backgroundColor: "rgba(0,0,0,0.5)",
+            display: "flex", justifyContent: "center", alignItems: "center",
+            zIndex: 1000,
+            padding: "20px"
+          }}
+        >
+          <div 
+            className="canvas-modal-content"
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              background: "white",
+              borderRadius: "16px",
+              padding: "32px",
+              width: "100%",
+              maxWidth: "600px",
+              maxHeight: "90vh",
+              overflowY: "auto",
+              position: "relative"
+            }}
+          >
+            <button 
+              onClick={() => setSelectedSubmission(null)}
+              style={{
+                position: "absolute", top: "20px", right: "20px",
+                background: "none", border: "none", fontSize: "24px",
+                cursor: "pointer", color: "#666"
+              }}
+            >
+              &times;
+            </button>
+            
+            <div style={{ display: "flex", gap: "10px", alignItems: "center", marginBottom: "16px" }}>
+              <span className={`canvas-status-badge ${getStatusClass(selectedSubmission.status)}`}>
+                {getStatusLabel(selectedSubmission.status)}
+              </span>
+              <span style={{ color: "#666", fontSize: "14px" }}>
+                {formatDate(selectedSubmission.createdAt)}
+              </span>
+            </div>
+
+            <h2 style={{ margin: "0 0 8px 0", color: "#222" }}>
+              {selectedSubmission.title || selectedSubmission.species || "Untitled Submission"}
+            </h2>
+            <p style={{ color: "#2E7D32", fontWeight: 600, margin: "0 0 24px 0" }}>
+              {selectedSubmission.type || "Sighting Report"}
+            </p>
+
+            <div style={{ display: "flex", flexDirection: "column", gap: "16px", marginBottom: "32px" }}>
+              {selectedSubmission.species && (
+                <div>
+                  <strong style={{ color: "#444", fontSize: "14px", display: "block", marginBottom: "4px" }}>Species</strong>
+                  <div>{selectedSubmission.species}</div>
+                </div>
+              )}
+              {selectedSubmission.location && (
+                <div>
+                  <strong style={{ color: "#444", fontSize: "14px", display: "block", marginBottom: "4px" }}>Location</strong>
+                  <div>{selectedSubmission.location}</div>
+                </div>
+              )}
+              <div>
+                <strong style={{ color: "#444", fontSize: "14px", display: "block", marginBottom: "4px" }}>Description</strong>
+                <div style={{ color: "#333", lineHeight: "1.6", whiteSpace: "pre-wrap" }}>
+                  {selectedSubmission.description}
+                </div>
+              </div>
+              
+              {selectedSubmission.photoURL && (
+                <div style={{ marginTop: "16px" }}>
+                  <strong style={{ color: "#444", fontSize: "14px", display: "block", marginBottom: "8px" }}>Attached Photo</strong>
+                  <img 
+                    src={selectedSubmission.photoURL} 
+                    alt="Submission attachment" 
+                    style={{ maxWidth: "100%", maxHeight: "300px", borderRadius: "8px", objectFit: "contain", backgroundColor: "#f5f5f5" }} 
+                  />
+                </div>
+              )}
+            </div>
+
+            <div style={{ 
+              background: selectedSubmission.status === "pending" ? "#F5F5F5" : "#E8F5E9", 
+              padding: "24px", 
+              borderRadius: "12px",
+              border: `1px solid ${selectedSubmission.status === "pending" ? "#E0E0E0" : "#C8E6C9"}`
+            }}>
+              <h3 style={{ margin: "0 0 12px 0", color: selectedSubmission.status === "pending" ? "#666" : "#2E7D32", fontSize: "16px", display: "flex", alignItems: "center", gap: "8px" }}>
+                {selectedSubmission.status === "pending" ? "⏳ Teacher Feedback" : "✔️ Teacher Feedback"}
+              </h3>
+              
+              {selectedSubmission.status === "pending" ? (
+                <p style={{ color: "#666", margin: 0, fontStyle: "italic" }}>
+                  Your submission has been received and is currently awaiting review by a teacher. Check back later for feedback!
+                </p>
+              ) : (
+                <div style={{ color: "#1B5E20", lineHeight: "1.6", whiteSpace: "pre-wrap" }}>
+                  {selectedSubmission.teacherFeedback || selectedSubmission.feedback || "Good job! No specific feedback provided."}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

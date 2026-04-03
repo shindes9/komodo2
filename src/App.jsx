@@ -380,16 +380,7 @@ export default function App() {
           }
         />
 
-        <Route
-          path="/member/past-submissions"
-          element={
-            <ProtectedRoute allowedRoles={["member"]}>
-              <DashboardLayout title="My Progress">
-                <MyCanvas />
-              </DashboardLayout>
-            </ProtectedRoute>
-          }
-        />
+
 
         <Route
           path="/member/library"
