@@ -16,6 +16,7 @@ import SightingsList from "./pages/SightingsList";
 import Messages from "./pages/Messages";
 import SchoolLibrary from "./pages/SchoolLibrary";
 import StudentProfile from "./pages/StudentProfile";
+import SpeciesQuiz from "./pages/SpeciesQuiz";
 import CommunityDashboard from "./pages/CommunityDashboard";
 import MemberDashboard from "./pages/MemberDashboard";
 import MemberProfile from "./pages/MemberProfile";
@@ -121,6 +122,17 @@ export default function App() {
             <ProtectedRoute allowedRoles={["student"]}>
               <DashboardLayout title="Public Library">
                 <PublicLibrary />
+              </DashboardLayout>
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/student/quiz"
+          element={
+            <ProtectedRoute allowedRoles={["student"]}>
+              <DashboardLayout title="Species ID Quiz">
+                <SpeciesQuiz />
               </DashboardLayout>
             </ProtectedRoute>
           }
