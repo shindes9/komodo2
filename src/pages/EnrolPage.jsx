@@ -33,7 +33,7 @@ const programs = [
 ];
 
 export default function EnrolPage() {
-  const { user } = useAuth();
+  const { user, schoolId, orgId } = useAuth();
   const [enrolledIds, setEnrolledIds] = useState([]);
   const [loading, setLoading] = useState(true);
   const [enrollingId, setEnrollingId] = useState(null);
@@ -70,6 +70,8 @@ export default function EnrolPage() {
       await addDoc(collection(db, "enrollments"), {
         userId: user.uid,
         programId: programId,
+        schoolId: schoolId || null,
+        orgId: orgId || null,
         enrolledAt: serverTimestamp(),
       });
 

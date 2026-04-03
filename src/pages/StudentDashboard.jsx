@@ -11,11 +11,6 @@ const programNames = {
   javan_rhino: "Javan Rhino Protection",
 };
 
-const fakeProgress = {
-  komodo_dragon: 72,
-  sumatran_tiger: 45,
-  javan_rhino: 18,
-};
 
 export default function StudentDashboard() {
   const { user, userData, schoolId } = useAuth();
@@ -172,61 +167,6 @@ export default function StudentDashboard() {
         )}
       </div>
 
-      <div className="student-section">
-        <div className="section-header">
-          <h3>My Programs</h3>
-          <button
-            className="section-action-btn"
-            onClick={() => navigate("/student/enrol")}
-          >
-            + Enrol in More
-          </button>
-        </div>
-
-        {loading ? (
-          <p className="loading-text">Loading programs...</p>
-        ) : enrollments.length === 0 ? (
-          <div className="empty-state">
-            <p>You haven't enrolled in any programs yet.</p>
-            <button
-              className="empty-state-btn"
-              onClick={() => navigate("/student/enrol")}
-            >
-              Browse Programs
-            </button>
-          </div>
-        ) : (
-          <div className="program-cards">
-            {enrollments.map((enrollment) => {
-              const name = programNames[enrollment.programId] || enrollment.programId;
-              const progress = fakeProgress[enrollment.programId] || 30;
-              return (
-                <div key={enrollment.id} className="program-card">
-                  <div className="program-card-header">
-                    <div className="program-icon">
-                      {name.charAt(0)}
-                    </div>
-                    <div>
-                      <h4>{name}</h4>
-                      <span className="program-status">Active</span>
-                    </div>
-                  </div>
-                  <div className="progress-bar-container">
-                    <div className="progress-bar-bg">
-                      <div
-                        className="progress-bar-fill"
-                        style={{ width: `${progress}%` }}
-                      ></div>
-                    </div>
-                    <span className="progress-text">{progress}% complete</span>
-                  </div>
-                  <button className="program-view-btn">View Activities</button>
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </div>
 
       <div className="student-section">
         <h3>Quick Actions</h3>

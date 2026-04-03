@@ -99,13 +99,17 @@ export default function PrincipalDashboard() {
 
     const unsubs = [];
 
+    let currentStudentIds = [];
+
     // ── 2a. Users (teachers + students count) ───────────────────
     const usersQ = query(collection(db, "users"), where("schoolId", "==", schoolId));
     unsubs.push(
       onSnapshot(usersQ, (snap) => {
         const all = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
         setTeachers(all.filter((u) => u.role === "teacher"));
-        setStudentCount(all.filter((u) => u.role === "student").length);
+        const students = all.filter((u) => u.role === "student");
+        setStudentCount(students.length);
+        currentStudentIds = students.map((s) => s.id);
       }, (err) => console.error("Users snapshot error:", err))
     );
 
@@ -130,14 +134,21 @@ export default function PrincipalDashboard() {
     );
 
     // ── 2c. Enrollments by program (real numbers) ───────────────
-    const enrollQ = query(collection(db, "enrollments"), where("schoolId", "==", schoolId));
+    // Query ALL enrollments, then filter client-side to ensure we capture legacy data
+    // lacking the schoolId field, matching only against our known students.
+    const enrollQ = query(collection(db, "enrollments"));
     unsubs.push(
       onSnapshot(enrollQ, async (snap) => {
         const allEnrollments = snap.docs.map((d) => d.data());
 
-        // Build per-program student lists with displayName lookup
-        // Collect all unique studentIds across programs
-        const studentIds = [...new Set(allEnrollments.map((e) => e.userId || e.studentId).filter(Boolean))];
+        // Filter to only enrollments belonging to our students or explicitly tagged with our schoolId
+        const schoolEnrollments = allEnrollments.filter((e) => {
+          const uid = e.userId || e.studentId;
+          return e.schoolId === schoolId || currentStudentIds.includes(uid);
+        });
+
+        // Collect all unique studentIds across programs for this school
+        const studentIds = [...new Set(schoolEnrollments.map((e) => e.userId || e.studentId).filter(Boolean))];
 
         // Fetch user names for IDs we have
         const nameMap = {};
@@ -158,7 +169,7 @@ export default function PrincipalDashboard() {
         }
 
         const updated = PROGRAMS.map((prog) => {
-          const enrolled = allEnrollments.filter(
+          const enrolled = schoolEnrollments.filter(
             (e) => e.programId === prog.key || e.program === prog.key
           );
           const students = enrolled.map((e) => {
