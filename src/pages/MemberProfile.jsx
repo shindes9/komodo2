@@ -36,12 +36,7 @@ export default function MemberProfile() {
   const [contributions, setContributions] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  /* ── Editable fields (self only) ── */
-  const [editMode, setEditMode] = useState(false);
-  const [displayName, setDisplayName] = useState("");
-  const [bio, setBio] = useState("");
-  const [saving, setSaving] = useState(false);
-  const [saveMessage, setSaveMessage] = useState("");
+
 
   useEffect(() => {
     if (!targetId) return;
@@ -90,29 +85,7 @@ export default function MemberProfile() {
     fetchProfile();
   }, [targetId]);
 
-  const handleSave = async () => {
-    setSaving(true);
-    setSaveMessage("");
-    try {
-      await updateDoc(doc(db, "users", user.uid), {
-        displayName: displayName.trim(),
-        bio: bio.trim(),
-      });
-      setProfile((prev) => ({
-        ...prev,
-        displayName: displayName.trim(),
-        bio: bio.trim(),
-      }));
-      setEditMode(false);
-      setSaveMessage("Profile updated successfully!");
-      setTimeout(() => setSaveMessage(""), 4000);
-    } catch (err) {
-      console.error("Error saving profile:", err);
-      setSaveMessage(`Failed: ${err.message}`);
-    } finally {
-      setSaving(false);
-    }
-  };
+
 
   if (loading) {
     return (
@@ -144,52 +117,14 @@ export default function MemberProfile() {
             {profileName.charAt(0).toUpperCase()}
           </div>
           <div className="mp-header-info">
-            {editMode && isSelf ? (
-              <>
-                <input
-                  className="mp-edit-input"
-                  value={displayName}
-                  onChange={(e) => setDisplayName(e.target.value)}
-                  placeholder="Your display name"
-                />
-                <textarea
-                  className="mp-edit-textarea"
-                  value={bio}
-                  onChange={(e) => setBio(e.target.value)}
-                  placeholder="Write a short bio about yourself..."
-                />
-                <div className="mp-edit-actions">
-                  <button className="mp-save-btn" onClick={handleSave} disabled={saving}>
-                    {saving ? "Saving..." : "Save"}
-                  </button>
-                  <button className="mp-cancel-btn" onClick={() => setEditMode(false)}>
-                    Cancel
-                  </button>
-                </div>
-              </>
-            ) : (
-              <>
-                <h2 className="mp-name">{profileName}</h2>
-                {profile.bio && <p className="mp-bio">{profile.bio}</p>}
-                <div className="mp-meta">
-                  {orgName && <span className="mp-org-badge">🏢 {orgName}</span>}
-                  <span className="mp-role-badge">Community Member</span>
-                </div>
-                {isSelf && (
-                  <button className="mp-edit-btn" onClick={() => setEditMode(true)}>
-                    ✏️ Edit Profile
-                  </button>
-                )}
-              </>
-            )}
+            <h2 className="mp-name">{profileName}</h2>
+            {profile.bio && <p className="mp-bio">{profile.bio}</p>}
+            <div className="mp-meta">
+              {orgName && <span className="mp-org-badge">🏢 {orgName}</span>}
+              <span className="mp-role-badge">Community Member</span>
+            </div>
           </div>
         </div>
-
-        {saveMessage && (
-          <p className={`mp-save-message ${saveMessage.includes("success") ? "mp-msg-success" : "mp-msg-error"}`}>
-            {saveMessage}
-          </p>
-        )}
 
         {/* ── Stats ── */}
         <div className="mp-stats">

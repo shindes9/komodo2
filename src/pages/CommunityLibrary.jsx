@@ -25,7 +25,7 @@ import "./SchoolLibrary.css";
  * This mirrors SchoolLibrary but is scoped to orgId instead of schoolId.
  */
 export default function CommunityLibrary() {
-  const { user, role, orgId } = useAuth();
+  const { user, userData, role, orgId } = useAuth();
   const navigate = useNavigate();
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -104,7 +104,7 @@ export default function CommunityLibrary() {
         status: "published",
         publishedAt: serverTimestamp(),
         publishedBy: user.uid,
-        publishedByEmail: user.email,
+        publishedByEmail: userData?.displayName || user.email,
       });
 
       if (selectedItem.contributorId) {

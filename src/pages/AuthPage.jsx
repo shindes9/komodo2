@@ -5,6 +5,7 @@ import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
   deleteUser,
+  updateProfile,
 } from "firebase/auth";
 import {
   doc,
@@ -296,9 +297,20 @@ export default function AuthPage() {
 
       const credential = await createUserWithEmailAndPassword(auth, cleanEmail, password);
 
+      const defaultDisplayName = cleanEmail.split("@")[0];
+      
+      // Sync immediately with Firebase Auth
+      await updateProfile(credential.user, { 
+        displayName: defaultDisplayName,
+      });
+
       const userData = {
         email: cleanEmail,
         role: cleanRole,
+        displayName: defaultDisplayName,
+        bio: "",
+        avatar: "🦎",
+        accentColor: "#2E7D32",
         createdAt: serverTimestamp(),
       };
 

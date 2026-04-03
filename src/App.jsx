@@ -22,6 +22,7 @@ import MemberDashboard from "./pages/MemberDashboard";
 import MemberProfile from "./pages/MemberProfile";
 import ProfileSettings from "./pages/ProfileSettings";
 import CommunityLibrary from "./pages/CommunityLibrary";
+import StudentDetail from "./pages/StudentDetail";
 import NotFound from "./pages/NotFound";
 import "./App.css";
 
@@ -48,6 +49,18 @@ export default function App() {
         <Route path="/" element={<AuthPage />} />
         <Route path="/library" element={<PublicLibrary />} />
         <Route path="/public-library" element={<PublicLibrary />} />
+
+        {/* ── Universal Routes ── */}
+        <Route
+          path="/settings"
+          element={
+            <ProtectedRoute>
+              <DashboardLayout title="Profile Settings">
+                <ProfileSettings />
+              </DashboardLayout>
+            </ProtectedRoute>
+          }
+        />
 
         {/* ── Student Routes ── */}
         <Route
@@ -156,6 +169,17 @@ export default function App() {
             <ProtectedRoute allowedRoles={["teacher"]}>
               <DashboardLayout title="Sighting Reports">
                 <SightingsList />
+              </DashboardLayout>
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/teacher/student/:id"
+          element={
+            <ProtectedRoute allowedRoles={["teacher", "principal", "chairman"]}>
+              <DashboardLayout title="Student Canvas">
+                <StudentDetail />
               </DashboardLayout>
             </ProtectedRoute>
           }

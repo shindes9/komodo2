@@ -29,7 +29,7 @@ const contributionTypes = [
 ];
 
 export default function SightingReport() {
-  const { user, schoolId } = useAuth();
+  const { user, userData, schoolId } = useAuth();
   const navigate = useNavigate();
   const [contributionType, setContributionType] = useState("Sighting Report");
   const [species, setSpecies] = useState("Komodo Dragon");
@@ -107,7 +107,7 @@ export default function SightingReport() {
 
       const contributionData = {
         studentId: user.uid,
-        studentEmail: user.email,
+        studentEmail: userData?.displayName || user.email,
         schoolId: schoolId || null,
         title: reportTitle,
         type: contributionType,
@@ -129,7 +129,7 @@ export default function SightingReport() {
       if (contributionType === "Sighting Report") {
         await addDoc(collection(db, "sightings"), {
           userId: user.uid,
-          userEmail: user.email,
+          userEmail: userData?.displayName || user.email,
           species,
           location: location.trim(),
           date,

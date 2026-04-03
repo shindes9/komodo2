@@ -43,15 +43,13 @@ export default function StudentProfile() {
   const [displayName, setDisplayName] = useState("");
   const [avatar, setAvatar] = useState("🦎");
   const [accentColor, setAccentColor] = useState("#2E7D32");
-  const [saving, setSaving] = useState(false);
-  const [saveMessage, setSaveMessage] = useState("");
+  const [bio, setBio] = useState("");
   const [loadingProfile, setLoadingProfile] = useState(true);
 
   const [sightings, setSightings] = useState([]);
   const [enrollments, setEnrollments] = useState([]);
   const [contributions, setContributions] = useState([]);
   const [loadingContributions, setLoadingContributions] = useState(true);
-  const [bio, setBio] = useState("");
 
   useEffect(() => {
     if (!user) return;
@@ -114,25 +112,7 @@ export default function StudentProfile() {
     fetchContributions();
   }, [user]);
 
-  const handleSaveProfile = async () => {
-    setSaving(true);
-    setSaveMessage("");
 
-    try {
-      await updateDoc(doc(db, "users", user.uid), {
-        displayName: displayName.trim(),
-        bio: bio.trim(),
-        avatar,
-        accentColor,
-      });
-      setSaveMessage("Profile saved!");
-    } catch (err) {
-      console.error("Error saving profile:", err);
-      setSaveMessage("Failed to save profile.");
-    } finally {
-      setSaving(false);
-    }
-  };
 
   const timelineItems = [
     ...sightings.map((s) => ({
@@ -160,84 +140,30 @@ export default function StudentProfile() {
 
   return (
     <div className="profile-page">
-      <div className="profile-card">
-        <h3>My Profile</h3>
-
+      <div className="profile-card" style={{ padding: "30px" }}>
         {loadingProfile ? (
           <p className="loading-text">Loading profile...</p>
         ) : (
-          <div className="profile-form">
-            <div className="profile-avatar-section">
-              <div
-                className="profile-avatar-display"
-                style={{ borderColor: accentColor }}
-              >
-                {avatar}
-              </div>
-              <div className="avatar-options">
-                {avatarOptions.map((opt) => (
-                  <button
-                    key={opt.emoji}
-                    className={`avatar-option ${avatar === opt.emoji ? "avatar-option-active" : ""}`}
-                    onClick={() => setAvatar(opt.emoji)}
-                    title={opt.label}
-                  >
-                    {opt.emoji}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div className="profile-field">
-              <label>Display Name</label>
-              <input
-                type="text"
-                value={displayName}
-                onChange={(e) => setDisplayName(e.target.value)}
-                placeholder="Enter your display name"
-              />
-            </div>
-
-            <div className="profile-field">
-              <label>Email</label>
-              <input type="text" value={user?.email || ""} disabled />
-            </div>
-
-            <div className="profile-field">
-              <label>Bio</label>
-              <textarea
-                value={bio}
-                onChange={(e) => setBio(e.target.value)}
-                placeholder="Write a short bio about yourself..."
-                style={{ resize: "vertical", minHeight: "60px", fontFamily: "inherit", padding: "10px", borderRadius: "8px", border: "1px solid #d7e3d9", fontSize: "14px", width: "100%", boxSizing: "border-box" }}
-              />
-            </div>
-
-            <div className="profile-field">
-              <label>Accent Color</label>
-              <div className="color-options">
-                {colorOptions.map((c) => (
-                  <button
-                    key={c.value}
-                    className={`color-option ${accentColor === c.value ? "color-option-active" : ""}`}
-                    style={{ background: c.value }}
-                    onClick={() => setAccentColor(c.value)}
-                    title={c.name}
-                  />
-                ))}
-              </div>
-            </div>
-
-            {saveMessage && <p className="save-message">{saveMessage}</p>}
-
-            <button
-              className="save-profile-btn"
-              style={{ background: accentColor }}
-              onClick={handleSaveProfile}
-              disabled={saving}
+          <div style={{ display: "flex", gap: "24px", alignItems: "center" }}>
+            <div
+              style={{
+                width: "80px",
+                height: "80px",
+                borderRadius: "50%",
+                background: "#f0f4f1",
+                border: `3px solid ${accentColor}`,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                fontSize: "40px",
+              }}
             >
-              {saving ? "Saving..." : "Save Profile"}
-            </button>
+              {avatar}
+            </div>
+            <div>
+              <h2 style={{ margin: "0 0 8px 0", color: "#1a1d1a" }}>{displayName || user?.email}</h2>
+              <p style={{ margin: 0, color: "#666", lineHeight: 1.5 }}>{bio || "No bio provided."}</p>
+            </div>
           </div>
         )}
       </div>

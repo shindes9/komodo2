@@ -147,7 +147,7 @@ export default function PrincipalDashboard() {
           return {
             id: d.id,
             title: data.title || `${data.species || "Unknown"} Sighting - ${data.location || ""}`,
-            author: data.studentEmail || "Anonymous",
+            author: data.studentName || data.studentEmail || "Anonymous",
             type: data.type || "Sighting Report",
             status: data.status || "pending",
             isPublic: data.isPublic || false,

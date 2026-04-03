@@ -373,7 +373,12 @@ export default function TeacherDashboard() {
                     ) : (
                       classStudents.map((s, idx) => (
                         <div key={s.id || idx} className="student-row">
-                          <span>{s.studentEmail || s.studentId}</span>
+                          <span
+                            onClick={() => navigate(`/teacher/student/${s.studentId}`)}
+                            style={{ color: "#2E7D32", cursor: "pointer", fontWeight: 500, textDecoration: "underline" }}
+                          >
+                            {s.studentName || s.studentEmail || s.studentId}
+                          </span>
                         </div>
                       ))
                     )}
@@ -435,8 +440,15 @@ export default function TeacherDashboard() {
             </div>
             {submissions.slice(0, 10).map((sub) => (
               <div key={sub.id} className="submissions-row">
-                <span>{sub.studentEmail || "Unknown"}</span>
-                <span>{sub.type || "Sighting Report"}</span>
+                <span
+                  onClick={() => navigate(`/teacher/student/${sub.studentId || sub.userId}`)}
+                  style={{ color: "#2E7D32", cursor: "pointer", fontWeight: 500, textDecoration: "underline", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}
+                >
+                  {sub.contributorName || sub.studentName || sub.studentEmail || "Unknown"}
+                </span>
+                <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                  {sub.type || "Sighting Report"}
+                </span>
                 <span>{sub.title || `${sub.species} - ${sub.location}`}</span>
                 <span className={`submission-status ${sub.status === "pending" ? "pending" : "reviewed"}`}>
                   {sub.status}
@@ -467,7 +479,12 @@ export default function TeacherDashboard() {
             </div>
             {quizResults.map((result) => (
               <div key={result.id} className="submissions-row" style={{ gridTemplateColumns: "2fr 1fr 1fr" }}>
-                <span>{result.studentName || result.studentEmail || "Unknown"}</span>
+                <span
+                  onClick={() => navigate(`/teacher/student/${result.studentId}`)}
+                  style={{ color: "#2E7D32", cursor: "pointer", fontWeight: 500, textDecoration: "underline", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}
+                >
+                  {result.studentName || result.studentEmail || "Unknown"}
+                </span>
                 <span style={{ fontWeight: "600", color: result.percentage >= 80 ? "#2E7D32" : result.percentage >= 60 ? "#e65100" : "#d32f2f" }}>
                   {result.score} / {result.totalQuestions} ({result.percentage}%)
                 </span>

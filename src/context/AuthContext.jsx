@@ -7,6 +7,7 @@ const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
+  const [userData, setUserData] = useState(null);
   const [role, setRole] = useState(null);
   const [schoolId, setSchoolId] = useState(null);
   const [orgId, setOrgId] = useState(null);
@@ -26,6 +27,7 @@ export function AuthProvider({ children }) {
 
       if (!firebaseUser) {
         setUser(null);
+        setUserData(null);
         setRole(null);
         setSchoolId(null);
         setOrgId(null);
@@ -55,6 +57,7 @@ export function AuthProvider({ children }) {
           const userSchoolId = data.schoolId || null;
           const userOrgId = data.orgId || null;
 
+          setUserData(data);
           setRole(userRole);
           setSchoolId(userSchoolId);
           setOrgId(userOrgId);
@@ -87,6 +90,7 @@ export function AuthProvider({ children }) {
         },
         (error) => {
           console.error("User document listener error:", error);
+          setUserData(null);
           setRole(null);
           setSchoolId(null);
           setOrgId(null);
@@ -103,7 +107,7 @@ export function AuthProvider({ children }) {
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user, role, schoolId, orgId, classIds, loading }}>
+    <AuthContext.Provider value={{ user, userData, role, schoolId, orgId, classIds, loading }}>
       {children}
     </AuthContext.Provider>
   );

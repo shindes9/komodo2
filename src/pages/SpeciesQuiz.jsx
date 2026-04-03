@@ -62,7 +62,7 @@ const STATE = {
 };
 
 export default function SpeciesQuiz() {
-  const { user, schoolId } = useAuth();
+  const { user, userData, schoolId } = useAuth();
   const navigate = useNavigate();
 
   // Quiz structure (built once on mount)
@@ -123,21 +123,12 @@ export default function SpeciesQuiz() {
     setSubmitError("");
 
     try {
-      // Fetch displayName from Firestore (never stale)
-      let studentName = user.email;
-      try {
-        const userSnap = await getDoc(doc(db, "users", user.uid));
-        if (userSnap.exists()) {
-          studentName = userSnap.data().displayName || user.email;
-        }
-      } catch {
-        // fall back to email
-      }
+      const studentName = userData?.displayName || user.email;
 
       await addDoc(collection(db, "quiz_results"), {
         studentId: user.uid,
         studentName,
-        studentEmail: user.email,
+        studentEmail: userData?.displayName || user.email,
         schoolId: schoolId || null,
         score,
         totalQuestions,

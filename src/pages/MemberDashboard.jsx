@@ -15,7 +15,7 @@ import {
 import "./MemberDashboard.css";
 
 export default function MemberDashboard() {
-  const { user, orgId } = useAuth();
+  const { user, userData, orgId } = useAuth();
   const navigate = useNavigate();
 
   const [orgName, setOrgName] = useState("");
@@ -88,8 +88,8 @@ export default function MemberDashboard() {
         description: formContent.trim(),
         type: formType,
         studentId: user.uid,
-        studentEmail: user.email,
-        contributorName: user.email?.split("@")[0] || "Community Member",
+        studentEmail: userData?.displayName || user.email,
+        contributorName: userData?.displayName || "Community Member",
         orgId: orgId || null,
         organizationType: "community",
         status: "submitted",

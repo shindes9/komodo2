@@ -21,7 +21,7 @@ import "./SightingsList.css";
  * Teachers can append multiple feedback entries per report.
  */
 export default function SightingsList() {
-  const { user } = useAuth();
+  const { user, userData } = useAuth();
   const [sightings, setSightings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filterSpecies, setFilterSpecies] = useState("all");
@@ -62,7 +62,7 @@ export default function SightingsList() {
     try {
       const newFeedback = {
         teacherId: user.uid,
-        teacherEmail: user.email,
+        teacherEmail: userData?.displayName || user.email,
         text: reviewNote.trim(),
         timestamp: Timestamp.now(),
       };

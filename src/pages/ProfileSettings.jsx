@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "../context/AuthContext";
-import { db } from "../firebase";
+import { auth, db } from "../firebase";
 import { doc, getDoc, updateDoc } from "firebase/firestore";
+import { updateProfile } from "firebase/auth";
 import "./ProfileSettings.css";
 
 const avatarOptions = [
@@ -26,8 +27,7 @@ const colorOptions = [
 ];
 
 /**
- * ProfileSettings — Universal profile editor for Teacher, Principal, Admin.
- * Students use StudentProfile.jsx, Community members use MemberProfile.jsx.
+ * ProfileSettings — Universal profile editor for ALL roles.
  * 
  * Fields:
  *  - displayName (editable)
@@ -74,6 +74,13 @@ export default function ProfileSettings() {
     setSaveMessage("");
 
     try {
+      // 1. Sync with Firebase Auth
+      await updateProfile(auth.currentUser, {
+        displayName: displayName.trim(),
+        photoURL: avatar,
+      });
+
+      // 2. Sync with Firestore
       await updateDoc(doc(db, "users", user.uid), {
         displayName: displayName.trim(),
         bio: bio.trim(),
@@ -91,10 +98,12 @@ export default function ProfileSettings() {
   };
 
   const roleTitles = {
+    student: "Student",
     teacher: "Teacher",
     principal: "Principal",
     admin: "Administrator",
     chairman: "Chairman",
+    member: "Community Member",
   };
 
   return (

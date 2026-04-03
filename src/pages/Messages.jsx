@@ -26,7 +26,7 @@ import "./Messages.css";
  * Security  : cross-school messaging is blocked; community/public have no access.
  */
 export default function Messages() {
-  const { user, role, schoolId, orgId, classIds } = useAuth();
+  const { user, userData, role, schoolId, orgId, classIds } = useAuth();
   const navigate = useNavigate();
 
   const [conversations, setConversations] = useState([]);
@@ -213,7 +213,7 @@ export default function Messages() {
           if (d.id !== user.uid) {
             teacherIds.add(d.id);
             const data = d.data();
-            contacts.push({ id: d.id, email: data.email, role: "teacher", schoolId: data.schoolId });
+            contacts.push({ id: d.id, email: data.displayName || data.email, role: "teacher", schoolId: data.schoolId });
             schoolMap[d.id] = data.schoolId;
           }
         });
@@ -232,7 +232,7 @@ export default function Messages() {
                 if (userDoc.exists()) {
                   const ud = userDoc.data();
                   if (ud.schoolId === schoolId) {
-                    contacts.push({ id: sid, email: ud.email, role: "student", schoolId: ud.schoolId });
+                    contacts.push({ id: sid, email: ud.displayName || ud.email, role: "student", schoolId: ud.schoolId });
                     schoolMap[sid] = ud.schoolId;
                   }
                 }
@@ -256,7 +256,7 @@ export default function Messages() {
                 if (userDoc.exists()) {
                   const ud = userDoc.data();
                   if (ud.schoolId === schoolId) {
-                    contacts.push({ id: sid, email: ud.email, role: "student", schoolId: ud.schoolId });
+                    contacts.push({ id: sid, email: ud.displayName || ud.email, role: "student", schoolId: ud.schoolId });
                     schoolMap[sid] = ud.schoolId;
                   }
                 }
@@ -276,7 +276,7 @@ export default function Messages() {
           if (d.id !== user.uid && !addedIds.has(d.id)) {
             addedIds.add(d.id);
             const data = d.data();
-            contacts.push({ id: d.id, email: data.email, role: "principal", schoolId: data.schoolId });
+            contacts.push({ id: d.id, email: data.displayName || data.email, role: "principal", schoolId: data.schoolId });
             schoolMap[d.id] = data.schoolId;
           }
         });
@@ -292,7 +292,7 @@ export default function Messages() {
           if (d.id !== user.uid && !addedIds.has(d.id)) {
             addedIds.add(d.id);
             const data = d.data();
-            contacts.push({ id: d.id, email: data.email, role: "teacher", schoolId: data.schoolId });
+            contacts.push({ id: d.id, email: data.displayName || data.email, role: "teacher", schoolId: data.schoolId });
             schoolMap[d.id] = data.schoolId;
           }
         });
@@ -307,7 +307,7 @@ export default function Messages() {
         snap.docs.forEach((d) => {
           if (d.id !== user.uid) {
             const data = d.data();
-            contacts.push({ id: d.id, email: data.email, role: "teacher", schoolId: data.schoolId });
+            contacts.push({ id: d.id, email: data.displayName || data.email, role: "teacher", schoolId: data.schoolId });
             schoolMap[d.id] = data.schoolId;
           }
         });
@@ -322,7 +322,7 @@ export default function Messages() {
         memberSnap.docs.forEach((d) => {
           if (d.id !== user.uid) {
             const data = d.data();
-            contacts.push({ id: d.id, email: data.email, role: "member", orgId: data.orgId });
+            contacts.push({ id: d.id, email: data.displayName || data.email, role: "member", orgId: data.orgId });
             orgMap[d.id] = data.orgId;
           }
         });
@@ -341,7 +341,7 @@ export default function Messages() {
           if (d.id !== user.uid && !addedIds.has(d.id)) {
             addedIds.add(d.id);
             const data = d.data();
-            contacts.push({ id: d.id, email: data.email, role: "chairman", orgId: data.orgId });
+            contacts.push({ id: d.id, email: data.displayName || data.email, role: "chairman", orgId: data.orgId });
             orgMap[d.id] = data.orgId;
           }
         });
@@ -357,7 +357,7 @@ export default function Messages() {
           if (d.id !== user.uid && !addedIds.has(d.id)) {
             addedIds.add(d.id);
             const data = d.data();
-            contacts.push({ id: d.id, email: data.email, role: "member", orgId: data.orgId });
+            contacts.push({ id: d.id, email: data.displayName || data.email, role: "member", orgId: data.orgId });
             orgMap[d.id] = data.orgId;
           }
         });
@@ -460,7 +460,7 @@ export default function Messages() {
 
       await addDoc(collection(db, "messages"), {
         senderId: user.uid,
-        senderEmail: user.email,
+        senderEmail: userData?.displayName || user.email,
         senderRole: role,
         receiverId: selectedUserId,
         receiverEmail: selectedUserEmail,
@@ -474,7 +474,7 @@ export default function Messages() {
       });
 
       // Notify recipient (include schoolId/orgId for walled-garden filtering)
-      createNotification(selectedUserId, `New message from ${user.email}`, schoolId || orgId);
+      createNotification(selectedUserId, `New message from ${userData?.displayName || user.email}`, schoolId || orgId);
       setNewMessage("");
     } catch (err) {
       console.error("Error sending message:", err);

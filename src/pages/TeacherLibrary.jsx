@@ -24,7 +24,7 @@ import "./SchoolLibrary.css";
  * Only the assigned teacher and the owning student can see feedback.
  */
 export default function TeacherLibrary() {
-  const { user, schoolId } = useAuth();
+  const { user, userData, schoolId } = useAuth();
   const navigate = useNavigate();
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -97,7 +97,7 @@ export default function TeacherLibrary() {
     try {
       const newFeedback = {
         teacherId: user.uid,
-        teacherEmail: user.email,
+        teacherEmail: userData?.displayName || user.email,
         text: feedbackText.trim(),
         timestamp: Timestamp.now(),
       };
@@ -111,7 +111,7 @@ export default function TeacherLibrary() {
       if (selectedItem.studentId) {
         createNotification(
           selectedItem.studentId,
-          `New feedback on "${selectedItem.title}" from ${user.email}`
+          `New feedback on "${selectedItem.title}" from ${userData?.displayName || user.email}`
         );
       }
 
@@ -153,14 +153,14 @@ export default function TeacherLibrary() {
         status: "published",
         publishedAt: serverTimestamp(),
         publishedBy: user.uid,
-        publishedByEmail: user.email,
+        publishedByEmail: userData?.displayName || user.email,
       });
 
       // Notify the student
       if (selectedItem.studentId) {
         createNotification(
           selectedItem.studentId,
-          `Your submission "${selectedItem.title}" has been published to the Public Library by ${user.email}!`
+          `Your submission "${selectedItem.title}" has been published to the Public Library by ${userData?.displayName || user.email}!`
         );
       }
 
