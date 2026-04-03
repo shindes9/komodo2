@@ -30,6 +30,7 @@ const navLinks = {
     { label: "My Work", path: "/student/sightings", icon: "\u{1F4DD}", tooltip: "Submit and view your conservation work" },
     { label: "Library", path: "/student/library", icon: "\u{1F4D6}", tooltip: "Browse your school's contribution library" },
     { label: "Messages", path: "/student/messages", icon: "\u{2709}\uFE0F", tooltip: "Message your school teachers and classmates" },
+    { label: "Species Quiz", path: "/student/quiz", icon: "🎮", tooltip: "Test your species knowledge" },
     { label: "My Profile", path: "/student/profile", icon: "\u{1F464}", tooltip: "View and edit your profile" },
     { label: "Public Library", path: "/student/public-library", icon: "\u{1F30D}", tooltip: "Browse the public species library and showcase" },
   ],

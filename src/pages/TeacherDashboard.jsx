@@ -42,6 +42,9 @@ export default function TeacherDashboard() {
   const [submissions, setSubmissions] = useState([]);
   const [loadingSubmissions, setLoadingSubmissions] = useState(true);
 
+  const [quizResults, setQuizResults] = useState([]);
+  const [loadingQuizResults, setLoadingQuizResults] = useState(true);
+
   const today = new Date().toLocaleDateString("en-GB", {
     weekday: "long",
     year: "numeric",
@@ -127,7 +130,33 @@ export default function TeacherDashboard() {
       }
     };
 
+    const fetchQuizResults = async () => {
+      try {
+        const q = query(
+          collection(db, "quiz_results"),
+          where("schoolId", "==", schoolId)
+        );
+        const snapshot = await getDocs(q);
+        const results = snapshot.docs.map((d) => ({
+          id: d.id,
+          ...d.data(),
+        }));
+        // Sort by timestamp descending
+        results.sort((a, b) => {
+          const tA = a.timestamp?.seconds || 0;
+          const tB = b.timestamp?.seconds || 0;
+          return tB - tA;
+        });
+        setQuizResults(results);
+      } catch (err) {
+        console.error("Error fetching quiz results:", err);
+      } finally {
+        setLoadingQuizResults(false);
+      }
+    };
+
     fetchSubmissions();
+    fetchQuizResults();
   }, [user, schoolId]);
 
   const handleCreateClass = async () => {
@@ -411,6 +440,39 @@ export default function TeacherDashboard() {
                 <span>{sub.title || `${sub.species} - ${sub.location}`}</span>
                 <span className={`submission-status ${sub.status === "pending" ? "pending" : "reviewed"}`}>
                   {sub.status}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div className="teacher-section">
+        <div className="section-header">
+          <h3>Student Performance (Quiz)</h3>
+        </div>
+
+        {loadingQuizResults ? (
+          <p className="loading-text">Loading quiz results...</p>
+        ) : quizResults.length === 0 ? (
+          <div className="empty-state">
+            <p>No quiz results yet.</p>
+          </div>
+        ) : (
+          <div className="submissions-table">
+            <div className="submissions-header" style={{ gridTemplateColumns: "2fr 1fr 1fr" }}>
+              <span>Student</span>
+              <span>Score</span>
+              <span>Date</span>
+            </div>
+            {quizResults.map((result) => (
+              <div key={result.id} className="submissions-row" style={{ gridTemplateColumns: "2fr 1fr 1fr" }}>
+                <span>{result.studentName || result.studentEmail || "Unknown"}</span>
+                <span style={{ fontWeight: "600", color: result.percentage >= 80 ? "#2E7D32" : result.percentage >= 60 ? "#e65100" : "#d32f2f" }}>
+                  {result.score} / {result.totalQuestions} ({result.percentage}%)
+                </span>
+                <span>
+                  {result.timestamp ? new Date(result.timestamp.toDate()).toLocaleDateString() : "N/A"}
                 </span>
               </div>
             ))}
