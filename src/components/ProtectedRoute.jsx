@@ -1,6 +1,17 @@
 import { Navigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 
+// Maps each role to its home dashboard path
+const ROLE_HOME = {
+  student: "/student",
+  teacher: "/teacher",
+  principal: "/principal",
+  admin: "/admin",
+  chairman: "/community",
+  member: "/member",
+  public: "/library",
+};
+
 export default function ProtectedRoute({ children, allowedRoles }) {
   const { user, role, loading } = useAuth();
 
@@ -17,13 +28,9 @@ export default function ProtectedRoute({ children, allowedRoles }) {
   }
 
   if (allowedRoles && !allowedRoles.includes(role)) {
-    return (
-      <div style={{ display: "flex", justifyContent: "center", alignItems: "center", height: "100vh", flexDirection: "column" }}>
-        <h2 style={{ color: "#c62828" }}>Access Denied</h2>
-        <p style={{ color: "#555" }}>You do not have permission to view this page.</p>
-        <p style={{ color: "#888", fontSize: 14 }}>Your role: {role || "none"}</p>
-      </div>
-    );
+    // Redirect to the user's own dashboard instead of showing "Access Denied"
+    const redirect = role ? (ROLE_HOME[role] || "/") : "/";
+    return <Navigate to={redirect} replace />;
   }
 
   return children;

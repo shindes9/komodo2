@@ -39,6 +39,8 @@ export default function AuthPage() {
   const [loading, setLoading] = useState(false);
   const [accessCode, setAccessCode] = useState("");
   const [accessCodeError, setAccessCodeError] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   /* ── Community Registration fields ── */
   const [communityOrgName, setCommunityOrgName] = useState("");
@@ -477,36 +479,58 @@ export default function AuthPage() {
         />
         {emailError && <div className="auth-error-text">{emailError}</div>}
 
-        <input
-          className={`auth-input ${passwordError ? "auth-input-error" : ""}`}
-          type="password"
-          autoComplete="off"
-          placeholder="Password"
-          value={password}
-          onChange={(e) => {
-            setPassword(e.target.value);
-            setMessage("");
-            setMessageType("");
-            setPasswordError("");
-          }}
-        />
+        <div className="auth-password-wrapper">
+          <input
+            className={`auth-input auth-input-pw ${passwordError ? "auth-input-error" : ""}`}
+            type={showPassword ? "text" : "password"}
+            autoComplete="off"
+            placeholder="Password"
+            value={password}
+            onChange={(e) => {
+              setPassword(e.target.value);
+              setMessage("");
+              setMessageType("");
+              setPasswordError("");
+            }}
+          />
+          <button
+            type="button"
+            className="auth-pw-toggle"
+            onClick={() => setShowPassword((v) => !v)}
+            tabIndex={-1}
+            aria-label={showPassword ? "Hide password" : "Show password"}
+          >
+            {showPassword ? "🙈" : "👁️"}
+          </button>
+        </div>
         {passwordError && <div className="auth-error-text">{passwordError}</div>}
 
         {mode === "register" && (
           <>
-            <input
-              className={`auth-input ${confirmPasswordError ? "auth-input-error" : ""}`}
-              type="password"
-              autoComplete="off"
-              placeholder="Confirm Password"
-              value={confirmPassword}
-              onChange={(e) => {
-                setConfirmPassword(e.target.value);
-                setMessage("");
-                setMessageType("");
-                setConfirmPasswordError("");
-              }}
-            />
+            <div className="auth-password-wrapper">
+              <input
+                className={`auth-input auth-input-pw ${confirmPasswordError ? "auth-input-error" : ""}`}
+                type={showConfirmPassword ? "text" : "password"}
+                autoComplete="off"
+                placeholder="Confirm Password"
+                value={confirmPassword}
+                onChange={(e) => {
+                  setConfirmPassword(e.target.value);
+                  setMessage("");
+                  setMessageType("");
+                  setConfirmPasswordError("");
+                }}
+              />
+              <button
+                type="button"
+                className="auth-pw-toggle"
+                onClick={() => setShowConfirmPassword((v) => !v)}
+                tabIndex={-1}
+                aria-label={showConfirmPassword ? "Hide password" : "Show password"}
+              >
+                {showConfirmPassword ? "🙈" : "👁️"}
+              </button>
+            </div>
             {confirmPasswordError && (
               <div className="auth-error-text">{confirmPasswordError}</div>
             )}

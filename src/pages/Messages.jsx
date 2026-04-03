@@ -6,7 +6,6 @@ import {
   collection,
   query,
   where,
-  orderBy,
   onSnapshot,
   addDoc,
   getDocs,
@@ -20,11 +19,11 @@ import "./Messages.css";
 
 /**
  * RBAC-enforced Internal Messaging System
- * 
- * Students: Can only message teachers & students within the same classId + schoolId
- * Teachers: Can message students in their classes + the principal of their school
- * Principal: Can message teachers in their school
- * Security: Cross-school messaging is blocked. Public visitors have zero access.
+ *
+ * Students  : message teachers & classmates within the same schoolId
+ * Teachers  : message students in their classes + principal & other teachers at their school
+ * Principals: message all teachers at their school
+ * Security  : cross-school messaging is blocked; community/public have no access.
  */
 export default function Messages() {
   const { user, role, schoolId, classIds } = useAuth();
@@ -48,14 +47,14 @@ export default function Messages() {
 
   const messagesEndRef = useRef(null);
 
-  // ──────────────────────────────────────────────────────────────
-  // Block public/community visitors entirely
-  // ──────────────────────────────────────────────────────────────
-  const isBlocked = !user || role === "public" || role === "community";
+  // Block community / public visitors entirely
+  const isBlocked = !user || role === "public" || role === "community" || role === "chairman" || role === "member";
 
-  // ──────────────────────────────────────────────────────────────
-  // Real-time message listener
-  // ──────────────────────────────────────────────────────────────
+  // ────────────────────────────────────────────────────────────────
+  // Listener 1: all messages involving current user → conversations list
+  // Uses or() for broad fetch; no orderBy so no composite-index required.
+  // We sort client-side after merging.
+  // ────────────────────────────────────────────────────────────────
   useEffect(() => {
     if (!user || isBlocked) return;
 
@@ -64,22 +63,22 @@ export default function Messages() {
       or(
         where("senderId", "==", user.uid),
         where("receiverId", "==", user.uid)
-      ),
-      orderBy("timestamp", "asc")
+      )
     );
 
     const unsub = onSnapshot(q, (snapshot) => {
-      const allMessages = snapshot.docs.map((d) => ({
-        id: d.id,
-        ...d.data(),
-      }));
+      const allMessages = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
 
-      // Build conversation list grouped by other user
+      // Group by other participant to build conversation list
       const convMap = {};
       allMessages.forEach((msg) => {
-        const otherId = msg.senderId === user.uid ? msg.receiverId : msg.senderId;
-        const otherEmail = msg.senderId === user.uid ? msg.receiverEmail : msg.senderEmail;
-        const otherRole = msg.senderId === user.uid ? msg.receiverRole : msg.senderRole;
+        const otherId =
+          msg.senderId === user.uid ? msg.receiverId : msg.senderId;
+        const otherEmail =
+          msg.senderId === user.uid ? msg.receiverEmail : msg.senderEmail;
+        const otherRole =
+          msg.senderId === user.uid ? msg.receiverRole : msg.senderRole;
+        const ts = msg.timestamp?.seconds || 0;
 
         if (!convMap[otherId]) {
           convMap[otherId] = {
@@ -90,7 +89,7 @@ export default function Messages() {
             lastTimestamp: msg.timestamp,
             unread: 0,
           };
-        } else {
+        } else if (ts > (convMap[otherId].lastTimestamp?.seconds || 0)) {
           convMap[otherId].lastMessage = msg.content || msg.text || "";
           convMap[otherId].lastTimestamp = msg.timestamp;
         }
@@ -100,94 +99,130 @@ export default function Messages() {
         }
       });
 
-      const convList = Object.values(convMap).sort((a, b) => {
+      const sorted = Object.values(convMap).sort((a, b) => {
         const ta = a.lastTimestamp?.seconds || 0;
         const tb = b.lastTimestamp?.seconds || 0;
         return tb - ta;
       });
 
-      setConversations(convList);
-
-      // Update messages for selected conversation
-      if (selectedUserId) {
-        const filtered = allMessages.filter(
-          (m) =>
-            (m.senderId === user.uid && m.receiverId === selectedUserId) ||
-            (m.senderId === selectedUserId && m.receiverId === user.uid)
-        );
-        setMessages(filtered);
-      }
+      setConversations(sorted);
     });
 
     return () => unsub();
-  }, [user, selectedUserId, isBlocked]);
+  }, [user, isBlocked]);
 
-  // Auto-scroll to bottom
+  // ────────────────────────────────────────────────────────────────
+  // Listener 2: messages for the currently-selected conversation.
+  // Uses two simple equality queries (sent + received) so no composite
+  // index is needed. Results are merged and sorted client-side.
+  // ────────────────────────────────────────────────────────────────
+  useEffect(() => {
+    if (!user || !selectedUserId || isBlocked) {
+      setMessages([]);
+      return;
+    }
+
+    // Clear stale messages immediately when switching conversation
+    setMessages([]);
+
+    // Mutable refs that onSnapshot closures can both write to
+    let sentMsgs = [];
+    let recvMsgs = [];
+
+    const merge = () => {
+      const combined = [...sentMsgs, ...recvMsgs];
+      combined.sort((a, b) => {
+        const ta = a.timestamp?.seconds ?? 0;
+        const tb = b.timestamp?.seconds ?? 0;
+        return ta - tb;
+      });
+      setMessages(combined);
+    };
+
+    const sentQ = query(
+      collection(db, "messages"),
+      where("senderId", "==", user.uid),
+      where("receiverId", "==", selectedUserId)
+    );
+
+    const recvQ = query(
+      collection(db, "messages"),
+      where("senderId", "==", selectedUserId),
+      where("receiverId", "==", user.uid)
+    );
+
+    const unsub1 = onSnapshot(sentQ, (snap) => {
+      sentMsgs = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+      merge();
+    });
+
+    const unsub2 = onSnapshot(recvQ, (snap) => {
+      recvMsgs = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+      merge();
+    });
+
+    return () => {
+      unsub1();
+      unsub2();
+    };
+  }, [user?.uid, selectedUserId, isBlocked]);
+
+  // Auto-scroll to bottom whenever messages list updates
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  // ──────────────────────────────────────────────────────────────
-  // RBAC Contact Loading
-  // ──────────────────────────────────────────────────────────────
+  // ────────────────────────────────────────────────────────────────
+  // RBAC contact loading
+  // ────────────────────────────────────────────────────────────────
   const loadAvailableContacts = useCallback(async () => {
     setLoadingContacts(true);
     setAvailableContacts([]);
     setSendError("");
 
-    try {
-      if (!schoolId) {
-        setAvailableContacts([]);
-        setLoadingContacts(false);
-        return;
-      }
+    if (!schoolId) {
+      setLoadingContacts(false);
+      return;
+    }
 
+    try {
       let contacts = [];
       const schoolMap = {};
 
       if (role === "student") {
-        // ── STUDENT RBAC ──
-        // Can message: teachers in same school + students in same classes
-        const teacherContactIds = new Set();
-        const studentContactIds = new Set();
-
-        // 1. Get teachers from same school
+        // Teachers in same school
         const teacherQ = query(
           collection(db, "users"),
           where("role", "==", "teacher"),
           where("schoolId", "==", schoolId)
         );
         const teacherSnap = await getDocs(teacherQ);
+        const teacherIds = new Set();
         teacherSnap.docs.forEach((d) => {
           if (d.id !== user.uid) {
-            teacherContactIds.add(d.id);
+            teacherIds.add(d.id);
             const data = d.data();
             contacts.push({ id: d.id, email: data.email, role: "teacher", schoolId: data.schoolId });
             schoolMap[d.id] = data.schoolId;
           }
         });
 
-        // 2. Get students from same classes
+        // Classmates from the same classes
         if (classIds && classIds.length > 0) {
+          const addedStudents = new Set();
           for (const classId of classIds) {
-            const memberQ = query(
-              collection(db, "classMembers"),
-              where("classId", "==", classId)
-            );
+            const memberQ = query(collection(db, "classMembers"), where("classId", "==", classId));
             const memberSnap = await getDocs(memberQ);
             for (const memberDoc of memberSnap.docs) {
-              const memberData = memberDoc.data();
-              const studentId = memberData.studentId;
-              if (studentId !== user.uid && !teacherContactIds.has(studentId) && !studentContactIds.has(studentId)) {
-                studentContactIds.add(studentId);
-                // Fetch user doc for email and schoolId
-                const userDoc = await getDoc(doc(db, "users", studentId));
+              const sid = memberDoc.data().studentId;
+              if (sid !== user.uid && !teacherIds.has(sid) && !addedStudents.has(sid)) {
+                addedStudents.add(sid);
+                const userDoc = await getDoc(doc(db, "users", sid));
                 if (userDoc.exists()) {
-                  const userData = userDoc.data();
-                  // Only add if same school
-                  if (userData.schoolId === schoolId) {
-                    contacts.push({ id: studentId, email: userData.email, role: "student", schoolId: userData.schoolId });
-                    schoolMap[studentId] = userData.schoolId;
+                  const ud = userDoc.data();
+                  if (ud.schoolId === schoolId) {
+                    contacts.push({ id: sid, email: ud.email, role: "student", schoolId: ud.schoolId });
+                    schoolMap[sid] = ud.schoolId;
                   }
                 }
               }
@@ -195,29 +230,23 @@ export default function Messages() {
           }
         }
       } else if (role === "teacher") {
-        // ── TEACHER RBAC ──
-        // Can message: students in their classes + the principal of their school
         const addedIds = new Set();
 
-        // 1. Get students from teacher's classes
+        // Students in teacher's classes
         if (classIds && classIds.length > 0) {
           for (const classId of classIds) {
-            const memberQ = query(
-              collection(db, "classMembers"),
-              where("classId", "==", classId)
-            );
+            const memberQ = query(collection(db, "classMembers"), where("classId", "==", classId));
             const memberSnap = await getDocs(memberQ);
             for (const memberDoc of memberSnap.docs) {
-              const memberData = memberDoc.data();
-              const studentId = memberData.studentId;
-              if (studentId !== user.uid && !addedIds.has(studentId)) {
-                addedIds.add(studentId);
-                const userDoc = await getDoc(doc(db, "users", studentId));
+              const sid = memberDoc.data().studentId;
+              if (sid !== user.uid && !addedIds.has(sid)) {
+                addedIds.add(sid);
+                const userDoc = await getDoc(doc(db, "users", sid));
                 if (userDoc.exists()) {
-                  const userData = userDoc.data();
-                  if (userData.schoolId === schoolId) {
-                    contacts.push({ id: studentId, email: userData.email, role: "student", schoolId: userData.schoolId });
-                    schoolMap[studentId] = userData.schoolId;
+                  const ud = userDoc.data();
+                  if (ud.schoolId === schoolId) {
+                    contacts.push({ id: sid, email: ud.email, role: "student", schoolId: ud.schoolId });
+                    schoolMap[sid] = ud.schoolId;
                   }
                 }
               }
@@ -225,7 +254,7 @@ export default function Messages() {
           }
         }
 
-        // 2. Get the principal of their school
+        // Principal at their school
         const principalQ = query(
           collection(db, "users"),
           where("role", "==", "principal"),
@@ -241,7 +270,7 @@ export default function Messages() {
           }
         });
 
-        // Also let teachers message other teachers in same school
+        // Other teachers at their school
         const otherTeacherQ = query(
           collection(db, "users"),
           where("role", "==", "teacher"),
@@ -257,18 +286,20 @@ export default function Messages() {
           }
         });
       } else if (role === "principal") {
-        // ── PRINCIPAL RBAC ──
-        // Can message: all teachers in their school
-        const schoolUsersQ = query(
+        // All teachers at their school
+        const teacherQ = query(
           collection(db, "users"),
-          where("schoolId", "==", schoolId),
-          where("role", "==", "teacher")
+          where("role", "==", "teacher"),
+          where("schoolId", "==", schoolId)
         );
-        const snapshot = await getDocs(schoolUsersQ);
-        contacts = snapshot.docs
-          .map((d) => ({ id: d.id, ...d.data() }))
-          .filter((u) => u.id !== user.uid);
-        contacts.forEach((c) => { schoolMap[c.id] = c.schoolId; });
+        const snap = await getDocs(teacherQ);
+        snap.docs.forEach((d) => {
+          if (d.id !== user.uid) {
+            const data = d.data();
+            contacts.push({ id: d.id, email: data.email, role: "teacher", schoolId: data.schoolId });
+            schoolMap[d.id] = data.schoolId;
+          }
+        });
       }
 
       setContactSchoolMap(schoolMap);
@@ -280,9 +311,9 @@ export default function Messages() {
     }
   }, [user, role, schoolId, classIds]);
 
-  // ──────────────────────────────────────────────────────────────
-  // Conversation selection
-  // ──────────────────────────────────────────────────────────────
+  // ────────────────────────────────────────────────────────────────
+  // Conversation selection helpers
+  // ────────────────────────────────────────────────────────────────
   const selectConversation = (conv) => {
     setSelectedUserId(conv.userId);
     setSelectedUserEmail(conv.email);
@@ -294,98 +325,58 @@ export default function Messages() {
   const handleToggleNewChat = () => {
     const next = !showNewChat;
     setShowNewChat(next);
-    if (next) {
-      loadAvailableContacts();
-    }
+    if (next) loadAvailableContacts();
   };
 
-  const startConversation = (foundUser) => {
-    setSelectedUserId(foundUser.id);
-    setSelectedUserEmail(foundUser.email);
-    setSelectedUserRole(foundUser.role || "");
+  const startConversation = (contact) => {
+    setSelectedUserId(contact.id);
+    setSelectedUserEmail(contact.email);
+    setSelectedUserRole(contact.role || "");
     setShowNewChat(false);
     setAvailableContacts([]);
     setSendError("");
   };
 
-  // ──────────────────────────────────────────────────────────────
-  // RBAC Validation before sending
-  // ──────────────────────────────────────────────────────────────
+  // ────────────────────────────────────────────────────────────────
+  // RBAC validation before send
+  // ────────────────────────────────────────────────────────────────
   const validateSend = async (receiverId) => {
-    // 1. Block public/community users
-    if (!user || role === "public" || role === "community") {
+    if (!user || role === "public" || role === "community" || role === "chairman" || role === "member") {
       return "You do not have permission to send messages.";
     }
+    if (receiverId === user.uid) return "You cannot send a message to yourself.";
 
-    // 2. Cannot message yourself
-    if (receiverId === user.uid) {
-      return "You cannot send a message to yourself.";
-    }
-
-    // 3. Fetch receiver data for cross-school check
+    // Cross-school check
     let receiverSchoolId = contactSchoolMap[receiverId];
     if (!receiverSchoolId) {
       try {
         const receiverDoc = await getDoc(doc(db, "users", receiverId));
-        if (receiverDoc.exists()) {
-          receiverSchoolId = receiverDoc.data().schoolId;
-        }
-      } catch (err) {
+        if (receiverDoc.exists()) receiverSchoolId = receiverDoc.data().schoolId;
+      } catch {
         return "Unable to verify recipient. Please try again.";
       }
     }
 
-    // 4. Cross-school block: sender.schoolId !== receiver.schoolId
     if (schoolId && receiverSchoolId && schoolId !== receiverSchoolId) {
       return "You cannot send messages to users outside your school.";
     }
 
-    // 5. Role-based restrictions
-    if (role === "student") {
-      // Students: only message teachers + students in same class & school
-      // We already filtered contacts in loadAvailableContacts, but double-check
-      const isValidContact = availableContacts.some((c) => c.id === receiverId) ||
-        conversations.some((c) => c.userId === receiverId);
-      if (!isValidContact) {
-        // Do a deeper check
-        const receiverDoc = await getDoc(doc(db, "users", receiverId));
-        if (receiverDoc.exists()) {
-          const recData = receiverDoc.data();
-          if (recData.schoolId !== schoolId) {
-            return "You cannot message users outside your school.";
-          }
-          if (recData.role !== "teacher" && recData.role !== "student") {
-            return "Students can only message teachers and other students in their classes.";
-          }
-        }
-      }
-    }
-
-    return null; // All good
+    return null;
   };
 
-  // ──────────────────────────────────────────────────────────────
-  // Send Message
-  // ──────────────────────────────────────────────────────────────
+  // ────────────────────────────────────────────────────────────────
+  // Send message
+  // ────────────────────────────────────────────────────────────────
   const handleSend = async () => {
     if (!newMessage.trim() || !selectedUserId) return;
     setSending(true);
     setSendError("");
 
     try {
-      // Validate RBAC
       const validationError = await validateSend(selectedUserId);
       if (validationError) {
         setSendError(validationError);
-        setSending(false);
         return;
-      }
-
-      // Find the classId for this conversation (if applicable)
-      let messageClassId = null;
-      if (classIds && classIds.length > 0) {
-        // Use the first shared class if any
-        messageClassId = classIds[0];
       }
 
       await addDoc(collection(db, "messages"), {
@@ -396,14 +387,14 @@ export default function Messages() {
         receiverEmail: selectedUserEmail,
         receiverRole: selectedUserRole,
         schoolId: schoolId || null,
-        classId: messageClassId,
         content: newMessage.trim(),
-        text: newMessage.trim(), // backward compat
+        text: newMessage.trim(),
         timestamp: serverTimestamp(),
         read: false,
       });
 
-      createNotification(selectedUserId, `New message from ${user.email}`);
+      // Notify recipient (include schoolId for walled-garden filtering)
+      createNotification(selectedUserId, `New message from ${user.email}`, schoolId);
       setNewMessage("");
     } catch (err) {
       console.error("Error sending message:", err);
@@ -420,6 +411,9 @@ export default function Messages() {
     }
   };
 
+  // ────────────────────────────────────────────────────────────────
+  // UI helpers
+  // ────────────────────────────────────────────────────────────────
   const formatTime = (timestamp) => {
     if (!timestamp?.seconds) return "";
     const date = new Date(timestamp.seconds * 1000);
@@ -443,17 +437,17 @@ export default function Messages() {
     role === "principal" ? "/principal" :
     "/student";
 
-  // ──────────────────────────────────────────────────────────────
-  // Block render for public visitors
-  // ──────────────────────────────────────────────────────────────
+  // ────────────────────────────────────────────────────────────────
+  // Block community / public visitors
+  // ────────────────────────────────────────────────────────────────
   if (isBlocked) {
     return (
       <div className="messages-page">
         <div className="messages-blocked">
           <div className="blocked-icon">🔒</div>
           <h3>Access Denied</h3>
-          <p>The messaging system is only available to authenticated school members (students, teachers, and principals).</p>
-          <p className="blocked-note">Public visitors do not have access to internal messaging or student profiles.</p>
+          <p>The messaging system is only available to school members (students, teachers, and principals).</p>
+          <p className="blocked-note">Community members and public visitors do not have access to internal messaging.</p>
         </div>
       </div>
     );
@@ -462,6 +456,7 @@ export default function Messages() {
   return (
     <div className="messages-page">
       <div className="messages-container">
+        {/* ── Left panel: conversations ── */}
         <div className="messages-sidebar">
           <div className="messages-sidebar-header">
             <button
@@ -483,25 +478,17 @@ export default function Messages() {
 
           <div className="messages-security-notice">
             <span className="security-icon">🔒</span>
-            {role === "student" && (
-              <span>You can message teachers and classmates within your school.</span>
-            )}
-            {role === "teacher" && (
-              <span>You can message your students and the school principal.</span>
-            )}
-            {role === "principal" && (
-              <span>You can message teachers at your school.</span>
-            )}
+            {role === "student" && <span>You can message teachers and classmates within your school.</span>}
+            {role === "teacher" && <span>You can message your students and the school principal.</span>}
+            {role === "principal" && <span>You can message teachers at your school.</span>}
           </div>
 
           {showNewChat && (
             <div className="new-chat-section">
               <p className="new-chat-label">
-                {role === "student"
-                  ? "Teachers & Classmates:"
-                  : role === "teacher"
-                  ? "Students & Staff:"
-                  : "School Teachers:"}
+                {role === "student" ? "Teachers & Classmates:" :
+                 role === "teacher" ? "Students & Staff:" :
+                 "School Teachers:"}
               </p>
               {loadingContacts ? (
                 <p className="loading-text">Loading contacts...</p>
@@ -560,6 +547,7 @@ export default function Messages() {
           </div>
         </div>
 
+        {/* ── Right panel: chat window ── */}
         <div className="messages-main">
           {!selectedUserId ? (
             <div className="no-chat-selected">

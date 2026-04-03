@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useState } from "react";
 import { onAuthStateChanged } from "firebase/auth";
-import { doc, getDoc, collection, query, where, getDocs } from "firebase/firestore";
+import { doc, collection, query, where, getDocs, onSnapshot } from "firebase/firestore";
 import { auth, db } from "../firebase";
 
 const AuthContext = createContext(null);
@@ -14,10 +14,18 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-      setUser(firebaseUser);
+    // Track the real-time user document listener so we can clean it up
+    let userDocUnsub = null;
+
+    const authUnsub = onAuthStateChanged(auth, (firebaseUser) => {
+      // Clean up any previous user-document listener when auth state changes
+      if (userDocUnsub) {
+        userDocUnsub();
+        userDocUnsub = null;
+      }
 
       if (!firebaseUser) {
+        setUser(null);
         setRole(null);
         setSchoolId(null);
         setOrgId(null);
@@ -26,55 +34,72 @@ export function AuthProvider({ children }) {
         return;
       }
 
-      try {
-        const userRef = doc(db, "users", firebaseUser.uid);
-        const userSnap = await getDoc(userRef);
+      setUser(firebaseUser);
 
-        if (userSnap.exists()) {
+      // Use onSnapshot instead of getDoc so we:
+      // 1. Handle the registration race condition (doc may not exist yet when
+      //    onAuthStateChanged fires during sign-up — we simply wait until it appears)
+      // 2. Automatically pick up schoolId updates (e.g. principal sets up school)
+      const userRef = doc(db, "users", firebaseUser.uid);
+
+      userDocUnsub = onSnapshot(
+        userRef,
+        async (userSnap) => {
+          if (!userSnap.exists()) {
+            // Document is being created (registration race) — keep loading spinner
+            return;
+          }
+
           const data = userSnap.data();
           const userRole = data.role || null;
           const userSchoolId = data.schoolId || null;
           const userOrgId = data.orgId || null;
+
           setRole(userRole);
           setSchoolId(userSchoolId);
           setOrgId(userOrgId);
 
-          // Fetch classIds based on role
-          let fetchedClassIds = [];
-          if (userRole === "student") {
-            const memberQ = query(
-              collection(db, "classMembers"),
-              where("studentId", "==", firebaseUser.uid)
-            );
-            const memberSnap = await getDocs(memberQ);
-            fetchedClassIds = memberSnap.docs.map((d) => d.data().classId);
-          } else if (userRole === "teacher") {
-            const classQ = query(
-              collection(db, "classes"),
-              where("teacherId", "==", firebaseUser.uid)
-            );
-            const classSnap = await getDocs(classQ);
-            fetchedClassIds = classSnap.docs.map((d) => d.id);
+          // Fetch class membership based on role
+          try {
+            let fetchedClassIds = [];
+            if (userRole === "student") {
+              const memberQ = query(
+                collection(db, "classMembers"),
+                where("studentId", "==", firebaseUser.uid)
+              );
+              const memberSnap = await getDocs(memberQ);
+              fetchedClassIds = memberSnap.docs.map((d) => d.data().classId);
+            } else if (userRole === "teacher") {
+              const classQ = query(
+                collection(db, "classes"),
+                where("teacherId", "==", firebaseUser.uid)
+              );
+              const classSnap = await getDocs(classQ);
+              fetchedClassIds = classSnap.docs.map((d) => d.id);
+            }
+            setClassIds(fetchedClassIds);
+          } catch (error) {
+            console.error("Failed to load class IDs:", error);
+            setClassIds([]);
           }
-          setClassIds(fetchedClassIds);
-        } else {
+
+          setLoading(false);
+        },
+        (error) => {
+          console.error("User document listener error:", error);
           setRole(null);
           setSchoolId(null);
           setOrgId(null);
           setClassIds([]);
+          setLoading(false);
         }
-      } catch (error) {
-        console.error("Failed to load user role:", error);
-        setRole(null);
-        setSchoolId(null);
-        setOrgId(null);
-        setClassIds([]);
-      } finally {
-        setLoading(false);
-      }
+      );
     });
 
-    return () => unsubscribe();
+    return () => {
+      authUnsub();
+      if (userDocUnsub) userDocUnsub();
+    };
   }, []);
 
   return (

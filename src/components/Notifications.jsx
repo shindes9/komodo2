@@ -13,7 +13,7 @@ import {
 import "./Notifications.css";
 
 export default function Notifications() {
-  const { user } = useAuth();
+  const { user, schoolId } = useAuth();
   const [notifications, setNotifications] = useState([]);
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
@@ -46,7 +46,13 @@ export default function Notifications() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const unreadCount = notifications.filter((n) => !n.read).length;
+  // Only count unread notifications that belong to the user's own school
+  // (or notifications with no schoolId, e.g. system notifications)
+  const unreadCount = notifications.filter((n) => {
+    if (n.read) return false;
+    if (schoolId && n.schoolId && n.schoolId !== schoolId) return false;
+    return true;
+  }).length;
 
   const markAsRead = async (notifId) => {
     try {

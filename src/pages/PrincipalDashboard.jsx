@@ -174,6 +174,7 @@ export default function PrincipalDashboard() {
 
     try {
       if (schoolId) {
+        // Update existing school document
         await updateDoc(doc(db, "schools", schoolId), {
           schoolName: schoolName.trim(),
           description: schoolDesc.trim(),
@@ -181,6 +182,30 @@ export default function PrincipalDashboard() {
         });
         setSchoolMessage("School profile saved successfully!");
       } else {
+        // Before creating, verify no school already exists for this principal
+        // (guards against duplicate creation if local state was somehow reset)
+        const existingQ = query(
+          collection(db, "schools"),
+          where("principalId", "==", user.uid)
+        );
+        const existingSnap = await getDocs(existingQ);
+
+        if (!existingSnap.empty) {
+          // School already exists — just link it and update
+          const existingDoc = existingSnap.docs[0];
+          const existingId = existingDoc.id;
+          setSchoolId(existingId);
+          await updateDoc(doc(db, "schools", existingId), {
+            schoolName: schoolName.trim(),
+            description: schoolDesc.trim(),
+            location: schoolLocation.trim(),
+          });
+          await updateDoc(doc(db, "users", user.uid), { schoolId: existingId });
+          setSchoolMessage("School profile saved successfully!");
+          return;
+        }
+
+        // Truly no school yet — create one
         let newSchoolId;
         try {
           const docRef = await addDoc(collection(db, "schools"), {
@@ -199,9 +224,7 @@ export default function PrincipalDashboard() {
         }
 
         try {
-          await updateDoc(doc(db, "users", user.uid), {
-            schoolId: newSchoolId,
-          });
+          await updateDoc(doc(db, "users", user.uid), { schoolId: newSchoolId });
           setSchoolMessage("School profile saved successfully!");
         } catch (userUpdateErr) {
           console.error("Error linking school to user:", userUpdateErr);
@@ -212,9 +235,9 @@ export default function PrincipalDashboard() {
       console.error("Error saving school:", err);
       setSchoolMessage(`Failed to save: ${err.message}`);
     } finally {
-      if (savingSchool) {
-         setSavingSchool(false);
-      }
+      // Always reset — do NOT wrap in `if (savingSchool)` because savingSchool
+      // is captured as the stale closure value (false) from before setSavingSchool(true).
+      setSavingSchool(false);
     }
   };
 
