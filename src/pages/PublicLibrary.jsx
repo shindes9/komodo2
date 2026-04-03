@@ -192,10 +192,10 @@ export default function PublicLibrary() {
 
   const loadShowcase = async () => {
     try {
-      // Only load PUBLISHED contributions (teacher-gated)
+      // Only load contributions published to public by teacher (gatekeeper)
       const publicQ = query(
         collection(db, "contributions"),
-        where("isPublic", "==", true)
+        where("isVisibleToPublic", "==", true)
       );
       const contribSnap = await getDocs(publicQ);
       const schoolCache = {};

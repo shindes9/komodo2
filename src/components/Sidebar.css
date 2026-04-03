@@ -37,6 +37,39 @@
   font-weight: 700;
 }
 
+/* My Canvas stats summary */
+.sidebar-canvas-stats {
+  padding: 14px 18px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.sidebar-canvas-title {
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.sidebar-canvas-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+}
+
+.sidebar-canvas-label {
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 12px;
+}
+
+.sidebar-canvas-value {
+  color: #66BB6A;
+  font-size: 14px;
+  font-weight: 700;
+}
+
 .sidebar-nav {
   flex: 1;
   padding: 12px 10px;
@@ -104,4 +137,20 @@
 
 .sidebar-logout-btn:hover {
   background: rgba(255, 255, 255, 0.1);
+}
+
+.sidebar-user-info {
+  margin-bottom: 6px;
+}
+
+.sidebar-role-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 8px;
+  background: rgba(102, 187, 106, 0.2);
+  color: #66BB6A;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: capitalize;
+  margin-bottom: 4px;
 }

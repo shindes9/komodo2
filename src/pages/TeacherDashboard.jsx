@@ -21,7 +21,7 @@ const programOptions = [
 ];
 
 export default function TeacherDashboard() {
-  const { user, schoolId } = useAuth();
+  const { user, userData, schoolId } = useAuth();
   const navigate = useNavigate();
   const [classes, setClasses] = useState([]);
   const [loadingClasses, setLoadingClasses] = useState(true);
@@ -299,7 +299,7 @@ export default function TeacherDashboard() {
   return (
     <div className="teacher-dashboard">
       <div className="teacher-welcome">
-        <h2>Welcome back, {user?.email}</h2>
+        <h2>Welcome back, {userData?.displayName || user?.email}</h2>
         <p className="teacher-date">{today}</p>
       </div>
 
@@ -413,22 +413,23 @@ export default function TeacherDashboard() {
         )}
       </div>
 
+      {/* ── Submissions Needing Review ── */}
       <div className="teacher-section">
         <div className="section-header">
-          <h3>Student Submissions</h3>
+          <h3>Submissions Needing Review</h3>
           <button
             className="section-action-btn"
             onClick={() => navigate("/teacher/library")}
           >
-            View Full Library
+            Open Review Dashboard
           </button>
         </div>
 
         {loadingSubmissions ? (
           <p className="loading-text">Loading submissions...</p>
-        ) : submissions.length === 0 ? (
+        ) : submissions.filter((s) => s.status === "pending").length === 0 ? (
           <div className="empty-state">
-            <p>No student submissions yet.</p>
+            <p>No pending submissions. All caught up!</p>
           </div>
         ) : (
           <div className="submissions-table">
@@ -438,7 +439,10 @@ export default function TeacherDashboard() {
               <span>Title</span>
               <span>Status</span>
             </div>
-            {submissions.slice(0, 10).map((sub) => (
+            {submissions
+              .filter((s) => s.status === "pending")
+              .slice(0, 10)
+              .map((sub) => (
               <div key={sub.id} className="submissions-row">
                 <span
                   onClick={() => navigate(`/teacher/student/${sub.studentId || sub.userId}`)}
@@ -450,8 +454,8 @@ export default function TeacherDashboard() {
                   {sub.type || "Sighting Report"}
                 </span>
                 <span>{sub.title || `${sub.species} - ${sub.location}`}</span>
-                <span className={`submission-status ${sub.status === "pending" ? "pending" : "reviewed"}`}>
-                  {sub.status}
+                <span className={`submission-status pending`}>
+                  pending
                 </span>
               </div>
             ))}

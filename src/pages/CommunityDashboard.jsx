@@ -15,7 +15,7 @@ import {
 import "./CommunityDashboard.css";
 
 export default function CommunityDashboard() {
-  const { user, orgId: authOrgId } = useAuth();
+  const { user, userData, orgId: authOrgId } = useAuth();
 
   /* ── Org Profile State ── */
   const [orgName, setOrgName] = useState("");
@@ -225,7 +225,7 @@ export default function CommunityDashboard() {
       <div className="comm-welcome">
         <h2>Welcome, Chairman</h2>
         <p className="comm-date">{today}</p>
-        <p className="comm-email">{user?.email}</p>
+        <p className="comm-email">{userData?.displayName || user?.email}</p>
       </div>
 
       {/* ── Stats ── */}

@@ -23,6 +23,7 @@ import MemberProfile from "./pages/MemberProfile";
 import ProfileSettings from "./pages/ProfileSettings";
 import CommunityLibrary from "./pages/CommunityLibrary";
 import StudentDetail from "./pages/StudentDetail";
+import PastSubmissions from "./pages/PastSubmissions";
 import NotFound from "./pages/NotFound";
 import "./App.css";
 
@@ -135,6 +136,17 @@ export default function App() {
             <ProtectedRoute allowedRoles={["student"]}>
               <DashboardLayout title="Public Library">
                 <PublicLibrary />
+              </DashboardLayout>
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/student/past-submissions"
+          element={
+            <ProtectedRoute allowedRoles={["student"]}>
+              <DashboardLayout title="Past Submissions">
+                <PastSubmissions />
               </DashboardLayout>
             </ProtectedRoute>
           }
@@ -361,6 +373,17 @@ export default function App() {
             <ProtectedRoute allowedRoles={["member"]}>
               <DashboardLayout title="My Contributions">
                 <SightingReport />
+              </DashboardLayout>
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/member/past-submissions"
+          element={
+            <ProtectedRoute allowedRoles={["member"]}>
+              <DashboardLayout title="Past Submissions">
+                <PastSubmissions />
               </DashboardLayout>
             </ProtectedRoute>
           }

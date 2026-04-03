@@ -17,11 +17,16 @@ import { createNotification } from "../utils/notifications";
 import "./SchoolLibrary.css";
 
 /**
- * Teacher Library — Review Dashboard
- * 
- * Shows FULL details: student name, email, timestamp, feedback thread.
- * Teachers can leave multiple feedback entries (appended to feedback[] array).
- * Only the assigned teacher and the owning student can see feedback.
+ * Teacher Library — Review Dashboard (Gatekeeper Workflow)
+ *
+ * Teachers review pending submissions, provide feedback, and control
+ * visibility to School Library and Public Library independently.
+ *
+ * Actions:
+ *   - "Save Feedback" → status: "reviewed", sends notification
+ *   - "Publish to School Library" → isVisibleToSchool: true
+ *   - "Publish to Public Showcase" → isVisibleToPublic: true, isPublic: true
+ *   - "Archive" → reverts visibility flags
  */
 export default function TeacherLibrary() {
   const { user, userData, schoolId } = useAuth();
@@ -56,19 +61,24 @@ export default function TeacherLibrary() {
           type: data.type || "Sighting Report",
           description: data.description || "",
           date: data.date || "",
+          location: data.location || "",
+          species: data.species || "",
           studentId: data.studentId,
           studentEmail: data.studentEmail || "Anonymous",
           photoURL: data.photoURL || "",
           status: data.status || "pending",
           feedback: data.feedback || [],
-          teacherNote: data.teacherNote || "", // legacy field
+          teacherFeedback: data.teacherFeedback || "",
+          feedbackDate: data.feedbackDate || null,
+          teacherNote: data.teacherNote || "",
           createdAt: data.createdAt,
+          isVisibleToSchool: data.isVisibleToSchool || false,
+          isVisibleToPublic: data.isVisibleToPublic || false,
           isPublished: data.isPublished || false,
           isPublic: data.isPublic || false,
         };
       });
 
-      // Sort by createdAt descending
       contribItems.sort((a, b) => {
         const ta = a.createdAt?.seconds || 0;
         const tb = b.createdAt?.seconds || 0;
@@ -87,23 +97,25 @@ export default function TeacherLibrary() {
   };
 
   /**
-   * Add feedback entry to the contributions document.
-   * Uses arrayUnion to append a new feedback object.
+   * Save Feedback — sets status to "reviewed" and appends feedback entry.
    */
-  const handleAddFeedback = async () => {
+  const handleSaveFeedback = async () => {
     if (!selectedItem || !feedbackText.trim()) return;
     setSavingFeedback(true);
 
     try {
+      const teacherName = userData?.displayName || user.email;
       const newFeedback = {
         teacherId: user.uid,
-        teacherEmail: userData?.displayName || user.email,
+        teacherEmail: teacherName,
         text: feedbackText.trim(),
         timestamp: Timestamp.now(),
       };
 
       await updateDoc(doc(db, "contributions", selectedItem.id), {
         feedback: arrayUnion(newFeedback),
+        teacherFeedback: feedbackText.trim(),
+        feedbackDate: serverTimestamp(),
         status: "reviewed",
       });
 
@@ -111,83 +123,113 @@ export default function TeacherLibrary() {
       if (selectedItem.studentId) {
         createNotification(
           selectedItem.studentId,
-          `New feedback on "${selectedItem.title}" from ${userData?.displayName || user.email}`
+          `Teacher ${teacherName} has reviewed your submission: "${selectedItem.title}"`,
+          schoolId
         );
       }
 
       // Update local state
       const updatedFeedback = [...(selectedItem.feedback || []), newFeedback];
+      const updateObj = { status: "reviewed", feedback: updatedFeedback, teacherFeedback: feedbackText.trim() };
       setItems((prev) =>
-        prev.map((i) =>
-          i.id === selectedItem.id
-            ? { ...i, status: "reviewed", feedback: updatedFeedback }
-            : i
-        )
+        prev.map((i) => i.id === selectedItem.id ? { ...i, ...updateObj } : i)
       );
-      setSelectedItem((prev) => ({
-        ...prev,
-        status: "reviewed",
-        feedback: updatedFeedback,
-      }));
+      setSelectedItem((prev) => ({ ...prev, ...updateObj }));
       setFeedbackText("");
     } catch (err) {
-      console.error("Error adding feedback:", err);
+      console.error("Error saving feedback:", err);
     } finally {
       setSavingFeedback(false);
     }
   };
 
   /**
-   * Teacher Gatekeeper: Publish a submission to the Public Library.
-   * Sets isPublished: true, publishedAt timestamp, and isPublic: true.
-   * Only teachers (and principals) can trigger this — students never see this button.
+   * Publish to School Library — sets isVisibleToSchool: true.
    */
-  const handlePublish = async () => {
+  const handlePublishToSchool = async () => {
     if (!selectedItem) return;
     setPublishing(true);
 
     try {
+      const teacherName = userData?.displayName || user.email;
       await updateDoc(doc(db, "contributions", selectedItem.id), {
-        isPublished: true,
-        isPublic: true,
-        status: "published",
-        publishedAt: serverTimestamp(),
-        publishedBy: user.uid,
-        publishedByEmail: userData?.displayName || user.email,
+        isVisibleToSchool: true,
+        status: selectedItem.status === "pending" ? "reviewed" : selectedItem.status,
       });
 
-      // Notify the student
       if (selectedItem.studentId) {
         createNotification(
           selectedItem.studentId,
-          `Your submission "${selectedItem.title}" has been published to the Public Library by ${userData?.displayName || user.email}!`
+          `Your submission "${selectedItem.title}" has been published to the School Library by ${teacherName}!`,
+          schoolId
         );
       }
 
-      // Update local state
+      const newStatus = selectedItem.status === "pending" ? "reviewed" : selectedItem.status;
       setItems((prev) =>
         prev.map((i) =>
-          i.id === selectedItem.id
-            ? { ...i, isPublished: true, isPublic: true, status: "published" }
-            : i
+          i.id === selectedItem.id ? { ...i, isVisibleToSchool: true, status: newStatus } : i
         )
       );
-      setSelectedItem((prev) => ({
-        ...prev,
-        isPublished: true,
-        isPublic: true,
-        status: "published",
-      }));
+      setSelectedItem((prev) => ({ ...prev, isVisibleToSchool: true, status: newStatus }));
     } catch (err) {
-      console.error("Error publishing to library:", err);
+      console.error("Error publishing to school library:", err);
     } finally {
       setPublishing(false);
     }
   };
 
   /**
-   * Archive: Revert a published submission back to internal-only.
-   * Sets isPublished: false, isPublic: false, status: "internal".
+   * Publish to Public Showcase — sets isVisibleToPublic: true, isPublic: true.
+   */
+  const handlePublishToPublic = async () => {
+    if (!selectedItem) return;
+    setPublishing(true);
+
+    try {
+      const teacherName = userData?.displayName || user.email;
+      await updateDoc(doc(db, "contributions", selectedItem.id), {
+        isVisibleToPublic: true,
+        isPublic: true,
+        isPublished: true,
+        publishedAt: serverTimestamp(),
+        publishedBy: user.uid,
+        publishedByEmail: teacherName,
+        status: selectedItem.status === "pending" ? "reviewed" : selectedItem.status,
+      });
+
+      if (selectedItem.studentId) {
+        createNotification(
+          selectedItem.studentId,
+          `Your submission "${selectedItem.title}" has been published to the Public Showcase by ${teacherName}!`,
+          schoolId
+        );
+      }
+
+      const newStatus = selectedItem.status === "pending" ? "reviewed" : selectedItem.status;
+      setItems((prev) =>
+        prev.map((i) =>
+          i.id === selectedItem.id
+            ? { ...i, isVisibleToPublic: true, isPublic: true, isPublished: true, status: newStatus }
+            : i
+        )
+      );
+      setSelectedItem((prev) => ({
+        ...prev,
+        isVisibleToPublic: true,
+        isPublic: true,
+        isPublished: true,
+        status: newStatus,
+      }));
+    } catch (err) {
+      console.error("Error publishing to public showcase:", err);
+    } finally {
+      setPublishing(false);
+    }
+  };
+
+  /**
+   * Archive — reverts all visibility flags.
    */
   const handleArchive = async () => {
     if (!selectedItem) return;
@@ -195,23 +237,25 @@ export default function TeacherLibrary() {
 
     try {
       await updateDoc(doc(db, "contributions", selectedItem.id), {
+        isVisibleToSchool: false,
+        isVisibleToPublic: false,
         isPublished: false,
         isPublic: false,
-        status: "internal",
       });
 
       setItems((prev) =>
         prev.map((i) =>
           i.id === selectedItem.id
-            ? { ...i, isPublished: false, isPublic: false, status: "internal" }
+            ? { ...i, isVisibleToSchool: false, isVisibleToPublic: false, isPublished: false, isPublic: false }
             : i
         )
       );
       setSelectedItem((prev) => ({
         ...prev,
+        isVisibleToSchool: false,
+        isVisibleToPublic: false,
         isPublished: false,
         isPublic: false,
-        status: "internal",
       }));
     } catch (err) {
       console.error("Error archiving submission:", err);
@@ -248,6 +292,8 @@ export default function TeacherLibrary() {
 
   const pendingCount = items.filter((i) => i.status === "pending").length;
   const reviewedCount = items.filter((i) => i.status === "reviewed").length;
+  const publishedSchoolCount = items.filter((i) => i.isVisibleToSchool).length;
+  const publishedPublicCount = items.filter((i) => i.isVisibleToPublic).length;
 
   return (
     <div className="school-library-page">
@@ -263,16 +309,18 @@ export default function TeacherLibrary() {
           <div>
             <h3>Review Dashboard</h3>
             <p className="school-library-desc">
-              Review student submissions from your school. Leave feedback notes that only you and the student can see.
+              Review student submissions. Provide feedback and control what appears in School Library and Public Showcase.
             </p>
           </div>
         </div>
       </div>
 
       <div className="review-stats-bar">
-        <span className="review-stat">📋 Total: {items.length}</span>
         <span className="review-stat review-stat-pending">⏳ Pending: {pendingCount}</span>
         <span className="review-stat review-stat-done">✅ Reviewed: {reviewedCount}</span>
+        <span className="review-stat">🏫 School Library: {publishedSchoolCount}</span>
+        <span className="review-stat">🌍 Public: {publishedPublicCount}</span>
+        <span className="review-stat">📋 Total: {items.length}</span>
       </div>
 
       <div className="school-library-filters">
@@ -333,11 +381,23 @@ export default function TeacherLibrary() {
                     <span className={`sl-list-status ${item.status}`}>{item.status}</span>
                   </div>
                   <div className="sl-list-item-author">By: {item.studentEmail}</div>
-                  {item.feedback && item.feedback.length > 0 && (
-                    <span className="sl-feedback-count">
-                      💬 {item.feedback.length}
-                    </span>
-                  )}
+                  <div style={{ display: "flex", gap: "4px", marginTop: "4px", flexWrap: "wrap" }}>
+                    {item.isVisibleToSchool && (
+                      <span style={{ fontSize: "10px", background: "#e8f5e9", color: "#2E7D32", padding: "2px 6px", borderRadius: "6px", fontWeight: 600 }}>
+                        School
+                      </span>
+                    )}
+                    {item.isVisibleToPublic && (
+                      <span style={{ fontSize: "10px", background: "#e3f2fd", color: "#1565c0", padding: "2px 6px", borderRadius: "6px", fontWeight: 600 }}>
+                        Public
+                      </span>
+                    )}
+                    {item.feedback && item.feedback.length > 0 && (
+                      <span className="sl-feedback-count">
+                        💬 {item.feedback.length}
+                      </span>
+                    )}
+                  </div>
                 </button>
               ))}
 
@@ -372,47 +432,82 @@ export default function TeacherLibrary() {
 
                 <div className="sl-reader-body">{selectedItem.description}</div>
 
-                {/* Legacy teacherNote display */}
-                {selectedItem.teacherNote && (
-                  <div className="sl-teacher-review-note">
-                    <strong>Legacy Review Note:</strong> {selectedItem.teacherNote}
+                {selectedItem.location && (
+                  <div style={{ fontSize: "13px", color: "#666", marginTop: "8px" }}>
+                    📍 Location: {selectedItem.location}
                   </div>
                 )}
 
-                {/* ── PUBLISH TO PUBLIC LIBRARY (Teacher Gatekeeper) ── */}
-                <div className="sl-publish-section">
-                  {selectedItem.isPublished ? (
-                    <div style={{ display: "flex", gap: "10px", alignItems: "center", flexWrap: "wrap" }}>
-                      <div className="sl-published-badge">
-                        ✅ Published to Public Library
-                      </div>
-                      <button
-                        className="sl-archive-btn"
-                        onClick={handleArchive}
-                        disabled={publishing}
-                        title="Remove from Public Library and keep internal only"
-                        style={{
-                          padding: "8px 14px",
-                          background: "#fff3e0",
-                          color: "#e65100",
-                          border: "1px solid #ffcc80",
-                          borderRadius: "8px",
-                          fontSize: "13px",
-                          fontWeight: 600,
-                          cursor: "pointer",
-                        }}
-                      >
-                        {publishing ? "Archiving..." : "🔒 Archive (Internal Only)"}
-                      </button>
+                {/* ── GATEKEEPER ACTIONS ── */}
+                <div className="sl-publish-section" style={{ display: "flex", gap: "10px", flexWrap: "wrap", marginTop: "16px", padding: "16px", background: "#f8faf8", borderRadius: "10px", border: "1px solid #e0e0e0" }}>
+                  {/* Publish to School Library */}
+                  {selectedItem.isVisibleToSchool ? (
+                    <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                      <span style={{ fontSize: "13px", color: "#2E7D32", fontWeight: 600 }}>✅ In School Library</span>
                     </div>
                   ) : (
                     <button
-                      className="sl-publish-btn"
-                      onClick={handlePublish}
+                      onClick={handlePublishToSchool}
                       disabled={publishing}
-                      title="Make this submission visible on the Public Library"
+                      title="Make visible in School Library for students and principal"
+                      style={{
+                        padding: "8px 16px",
+                        background: "#e8f5e9",
+                        color: "#2E7D32",
+                        border: "1px solid #a5d6a7",
+                        borderRadius: "8px",
+                        fontSize: "13px",
+                        fontWeight: 600,
+                        cursor: "pointer",
+                      }}
                     >
-                      {publishing ? "Publishing..." : "📢 Publish to Public Library"}
+                      {publishing ? "Publishing..." : "🏫 Publish to School Library"}
+                    </button>
+                  )}
+
+                  {/* Publish to Public Showcase */}
+                  {selectedItem.isVisibleToPublic ? (
+                    <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                      <span style={{ fontSize: "13px", color: "#1565c0", fontWeight: 600 }}>✅ In Public Showcase</span>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={handlePublishToPublic}
+                      disabled={publishing}
+                      title="Make visible on the Public Library for everyone"
+                      style={{
+                        padding: "8px 16px",
+                        background: "#e3f2fd",
+                        color: "#1565c0",
+                        border: "1px solid #90caf9",
+                        borderRadius: "8px",
+                        fontSize: "13px",
+                        fontWeight: 600,
+                        cursor: "pointer",
+                      }}
+                    >
+                      {publishing ? "Publishing..." : "🌍 Publish to Public Showcase"}
+                    </button>
+                  )}
+
+                  {/* Archive button — only show if published somewhere */}
+                  {(selectedItem.isVisibleToSchool || selectedItem.isVisibleToPublic) && (
+                    <button
+                      onClick={handleArchive}
+                      disabled={publishing}
+                      title="Remove from all libraries (keep as internal only)"
+                      style={{
+                        padding: "8px 14px",
+                        background: "#fff3e0",
+                        color: "#e65100",
+                        border: "1px solid #ffcc80",
+                        borderRadius: "8px",
+                        fontSize: "13px",
+                        fontWeight: 600,
+                        cursor: "pointer",
+                      }}
+                    >
+                      {publishing ? "Archiving..." : "🔒 Archive (Remove from Libraries)"}
                     </button>
                   )}
                 </div>
@@ -422,7 +517,7 @@ export default function TeacherLibrary() {
                   <h4 className="sl-feedback-title">
                     💬 Feedback & Notes ({selectedItem.feedback?.length || 0})
                   </h4>
-                  
+
                   {selectedItem.feedback && selectedItem.feedback.length > 0 ? (
                     <div className="sl-feedback-thread">
                       {selectedItem.feedback.map((fb, idx) => (
@@ -453,10 +548,11 @@ export default function TeacherLibrary() {
                     />
                     <button
                       className="sl-feedback-submit-btn"
-                      onClick={handleAddFeedback}
+                      onClick={handleSaveFeedback}
                       disabled={savingFeedback || !feedbackText.trim()}
+                      title="Save feedback and mark as reviewed"
                     >
-                      {savingFeedback ? "Saving..." : "Add Feedback"}
+                      {savingFeedback ? "Saving..." : "💾 Save Feedback"}
                     </button>
                   </div>
                 </div>

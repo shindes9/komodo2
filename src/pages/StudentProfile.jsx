@@ -168,28 +168,71 @@ export default function StudentProfile() {
         )}
       </div>
 
+      {/* Contribution Stats */}
+      <div className="profile-card">
+        <h3>My Canvas Summary</h3>
+        <div style={{ display: "flex", gap: "16px", flexWrap: "wrap", marginBottom: "16px" }}>
+          <div style={{ background: "#f4f8f4", borderRadius: "12px", padding: "16px 24px", textAlign: "center", minWidth: "120px" }}>
+            <div style={{ fontSize: "28px", fontWeight: 700, color: "#1b4332" }}>{contributions.length}</div>
+            <div style={{ fontSize: "12px", color: "#888" }}>Total Contributions</div>
+          </div>
+          <div style={{ background: "#e3f2fd", borderRadius: "12px", padding: "16px 24px", textAlign: "center", minWidth: "120px" }}>
+            <div style={{ fontSize: "28px", fontWeight: 700, color: "#1565c0" }}>{contributions.filter((c) => c.status !== "pending").length}</div>
+            <div style={{ fontSize: "12px", color: "#888" }}>Learning Progress (Reviewed)</div>
+          </div>
+          <div style={{ background: "#fff3e0", borderRadius: "12px", padding: "16px 24px", textAlign: "center", minWidth: "120px" }}>
+            <div style={{ fontSize: "28px", fontWeight: 700, color: "#e65100" }}>{contributions.filter((c) => c.status === "pending").length}</div>
+            <div style={{ fontSize: "12px", color: "#888" }}>Pending Review</div>
+          </div>
+          <div style={{ background: "#e8f5e9", borderRadius: "12px", padding: "16px 24px", textAlign: "center", minWidth: "120px" }}>
+            <div style={{ fontSize: "28px", fontWeight: 700, color: "#2E7D32" }}>{contributions.filter((c) => c.feedback && c.feedback.length > 0).length}</div>
+            <div style={{ fontSize: "12px", color: "#888" }}>With Feedback</div>
+          </div>
+        </div>
+      </div>
+
       <div className="profile-card">
         <h3>My Contributions</h3>
 
         {loadingContributions ? (
           <p className="loading-text">Loading...</p>
-        ) : contributions.length === 0 && sightings.length === 0 ? (
-          <p className="empty-text">No contributions or sighting reports yet.</p>
+        ) : contributions.length === 0 ? (
+          <p className="empty-text">No contributions yet. Start submitting your conservation work!</p>
         ) : (
           <div className="contributions-list">
-            {/* Contributions from contributions collection (with feedback) */}
             {contributions.map((c) => (
               <div key={c.id} className="contribution-item">
                 <div className="contribution-header">
                   <span className="contribution-title">
                     {c.title || `${c.species || "Unknown"} Sighting`}
                   </span>
-                  <span className={`contribution-status status-${c.status || "pending"}`}>
-                    {c.status || "pending"}
-                  </span>
+                  <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
+                    {c.feedback && c.feedback.length > 0 && (
+                      <span style={{ padding: "3px 10px", borderRadius: "12px", fontSize: "11px", fontWeight: 600, background: "#f3e5f5", color: "#7b1fa2" }}>
+                        💬 Feedback
+                      </span>
+                    )}
+                    <span className={`contribution-status status-${c.status || "pending"}`}>
+                      {c.status || "pending"}
+                    </span>
+                  </div>
                 </div>
                 <p className="contribution-desc">{c.description}</p>
                 {c.date && <span className="contribution-date">{c.date}</span>}
+
+                {/* Visibility badges */}
+                <div style={{ display: "flex", gap: "6px", marginTop: "6px" }}>
+                  {c.isVisibleToSchool && (
+                    <span style={{ fontSize: "11px", background: "#e8f5e9", color: "#2E7D32", padding: "2px 8px", borderRadius: "10px", fontWeight: 600 }}>
+                      In School Library
+                    </span>
+                  )}
+                  {(c.isVisibleToPublic || c.isPublic) && (
+                    <span style={{ fontSize: "11px", background: "#e3f2fd", color: "#1565c0", padding: "2px 8px", borderRadius: "10px", fontWeight: 600 }}>
+                      In Public Showcase
+                    </span>
+                  )}
+                </div>
 
                 {/* Teacher Feedback Thread */}
                 {c.feedback && c.feedback.length > 0 && (
@@ -197,33 +240,25 @@ export default function StudentProfile() {
                     <strong style={{ color: "#2E7D32", fontSize: "13px" }}>Teacher Feedback:</strong>
                     {c.feedback.map((fb, idx) => (
                       <div key={idx} style={{ background: "#f4f8f4", padding: "8px 12px", borderRadius: "8px", marginTop: "6px", borderLeft: "3px solid #2E7D32" }}>
-                        <div style={{ fontSize: "12px", color: "#2E7D32", fontWeight: 700 }}>{fb.teacherEmail || "Teacher"}</div>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                          <div style={{ fontSize: "12px", color: "#2E7D32", fontWeight: 700 }}>{fb.teacherEmail || "Teacher"}</div>
+                          {fb.timestamp?.seconds && (
+                            <span style={{ fontSize: "11px", color: "#999" }}>
+                              {new Date(fb.timestamp.seconds * 1000).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })}
+                            </span>
+                          )}
+                        </div>
                         <p style={{ margin: "4px 0 0 0", fontSize: "13px", color: "#333" }}>{fb.text}</p>
-                        {fb.timestamp?.seconds && (
-                          <span style={{ fontSize: "11px", color: "#999" }}>
-                            {new Date(fb.timestamp.seconds * 1000).toLocaleDateString()}
-                          </span>
-                        )}
                       </div>
                     ))}
                   </div>
                 )}
-              </div>
-            ))}
 
-            {/* Legacy sightings */}
-            {sightings.map((s) => (
-              <div key={s.id} className="contribution-item">
-                <div className="contribution-header">
-                  <span className="contribution-title">{s.species} Sighting</span>
-                  <span className={`contribution-status status-${s.status}`}>{s.status}</span>
-                </div>
-                <p className="contribution-desc">{s.description}</p>
-                <span className="contribution-date">{s.date} | {s.location}</span>
-                {s.teacherNote && (
+                {/* Legacy teacherFeedback field */}
+                {!c.feedback?.length && c.teacherFeedback && (
                   <div className="contribution-feedback-section">
-                    <strong style={{ color: "#2E7D32", fontSize: "13px" }}>Teacher Note:</strong>
-                    <p style={{ margin: "4px 0", fontSize: "13px", color: "#333" }}>{s.teacherNote}</p>
+                    <strong style={{ color: "#2E7D32", fontSize: "13px" }}>Teacher Feedback:</strong>
+                    <p style={{ margin: "4px 0", fontSize: "13px", color: "#333" }}>{c.teacherFeedback}</p>
                   </div>
                 )}
               </div>

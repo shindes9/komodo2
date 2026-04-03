@@ -18,7 +18,7 @@ const fakeProgress = {
 };
 
 export default function StudentDashboard() {
-  const { user, schoolId } = useAuth();
+  const { user, userData, schoolId } = useAuth();
   const navigate = useNavigate();
   const [enrollments, setEnrollments] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -113,7 +113,7 @@ export default function StudentDashboard() {
   return (
     <div className="student-dashboard">
       <div className="student-welcome">
-        <h2>Welcome back, {user?.email}</h2>
+        <h2>Welcome back, {userData?.displayName || user?.email}</h2>
         <p className="student-date">{today}</p>
       </div>
 

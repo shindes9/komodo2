@@ -20,7 +20,7 @@ const placeholderCommunities = [
 ];
 
 export default function AdminDashboard() {
-  const { user } = useAuth();
+  const { user, userData } = useAuth();
   const [schools, setSchools] = useState([]);
   const [users, setUsers] = useState([]);
   const [classes, setClasses] = useState([]);
@@ -219,7 +219,7 @@ export default function AdminDashboard() {
   return (
     <div className="admin-dashboard">
       <div className="admin-welcome">
-        <h2>Welcome back, {user?.email}</h2>
+        <h2>Welcome back, {userData?.displayName || user?.email}</h2>
         <p className="admin-date">{today}</p>
       </div>
 

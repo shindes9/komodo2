@@ -45,8 +45,6 @@ export default function SightingReport() {
   const [messageType, setMessageType] = useState("");
 
   const [reports, setReports] = useState([]);
-  const [loadingReports, setLoadingReports] = useState(true);
-  const [expandedFeedback, setExpandedFeedback] = useState(null);
 
   useEffect(() => {
     if (!user) return;
@@ -68,8 +66,6 @@ export default function SightingReport() {
       setReports(data);
     } catch (err) {
       console.error("Error fetching reports:", err);
-    } finally {
-      setLoadingReports(false);
     }
   };
 
@@ -118,7 +114,11 @@ export default function SightingReport() {
         description: description.trim(),
         photoURL,
         status: "pending",
-        feedback: [], // Initialize empty feedback array for teacher comments
+        feedback: [],
+        teacherFeedback: "",
+        feedbackDate: null,
+        isVisibleToSchool: false,
+        isVisibleToPublic: false,
         isPublic: false,
         createdAt: serverTimestamp(),
       };
@@ -158,18 +158,11 @@ export default function SightingReport() {
         });
       }
 
-      setMessage(`${contributionType} submitted successfully!`);
-      setMessageType("success");
-      setSpecies("Komodo Dragon");
-      setLocation("");
-      setDate("");
-      setTime("");
-      setDescription("");
-      setTitle("");
-      setImageUrl("");
-      setPhoto(null);
-
-      fetchReports();
+      // Redirect to Past Submissions page after successful submit
+      const rolePrefix = userData?.role === "member" ? "/member" : "/student";
+      navigate(`${rolePrefix}/past-submissions`, {
+        state: { successMessage: `${contributionType} submitted successfully! Your teacher will review it.` }
+      });
     } catch (err) {
       console.error("Error submitting report:", err);
       setMessage("Failed to submit. Please try again.");
@@ -177,23 +170,6 @@ export default function SightingReport() {
     } finally {
       setSubmitting(false);
     }
-  };
-
-  const getStatusClass = (status) => {
-    if (status === "approved") return "status-approved";
-    if (status === "reviewed") return "status-reviewed";
-    return "status-pending";
-  };
-
-  const formatFeedbackTime = (timestamp) => {
-    if (!timestamp?.seconds) return "";
-    return new Date(timestamp.seconds * 1000).toLocaleString("en-GB", {
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
   };
 
   return (
@@ -363,73 +339,19 @@ export default function SightingReport() {
 
       <div className="sighting-history-card">
         <h3>My Past Submissions</h3>
-
-        {loadingReports ? (
-          <p className="loading-text">Loading your submissions...</p>
-        ) : reports.length === 0 ? (
-          <p className="empty-text">You haven't submitted any work yet.</p>
-        ) : (
-          <div className="reports-list">
-            {reports.map((r) => (
-              <div key={r.id} className="report-item">
-                <div className="report-item-header">
-                  <div>
-                    <div className="report-species">{r.title || r.species}</div>
-                    <span className="report-type-badge">{r.type || "Sighting Report"}</span>
-                  </div>
-                  <span className={`report-status ${getStatusClass(r.status)}`}>
-                    {r.status}
-                  </span>
-                </div>
-                <div className="report-item-details">
-                  {r.location && <span>📍 {r.location}</span>}
-                  {r.date && <span>📅 {r.date}</span>}
-                  {r.time && <span>🕐 {r.time}</span>}
-                </div>
-                <p className="report-item-desc">{r.description}</p>
-                {r.photoURL && (
-                  <img src={r.photoURL} alt="Submission" className="report-thumbnail" />
-                )}
-
-                {/* Legacy teacherNote display */}
-                {r.teacherNote && (
-                  <div className="teacher-note-display">
-                    <strong>Teacher Note:</strong> {r.teacherNote}
-                  </div>
-                )}
-
-                {/* Feedback array display */}
-                {r.feedback && r.feedback.length > 0 && (
-                  <div className="feedback-section">
-                    <button
-                      className="feedback-toggle-btn"
-                      onClick={() => setExpandedFeedback(expandedFeedback === r.id ? null : r.id)}
-                    >
-                      💬 Teacher Feedback ({r.feedback.length})
-                      <span className="feedback-chevron">
-                        {expandedFeedback === r.id ? "▲" : "▼"}
-                      </span>
-                    </button>
-                    
-                    {expandedFeedback === r.id && (
-                      <div className="feedback-thread">
-                        {r.feedback.map((fb, idx) => (
-                          <div key={idx} className="feedback-entry">
-                            <div className="feedback-meta">
-                              <span className="feedback-author">{fb.teacherEmail || "Teacher"}</span>
-                              <span className="feedback-time">{formatFeedbackTime(fb.timestamp)}</span>
-                            </div>
-                            <p className="feedback-text">{fb.text}</p>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-        )}
+        <p className="empty-text" style={{ marginBottom: "12px" }}>
+          You have {reports.length} submission{reports.length !== 1 ? "s" : ""}. View details and teacher feedback on your Past Submissions page.
+        </p>
+        <button
+          className="sighting-submit-btn"
+          style={{ background: "#1565c0" }}
+          onClick={() => {
+            const rolePrefix = userData?.role === "member" ? "/member" : "/student";
+            navigate(`${rolePrefix}/past-submissions`);
+          }}
+        >
+          View Past Submissions
+        </button>
       </div>
     </div>
   );

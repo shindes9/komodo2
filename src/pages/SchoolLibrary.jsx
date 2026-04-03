@@ -37,11 +37,11 @@ export default function SchoolLibrary() {
 
       if (isPublicVisitor) {
         // ── PUBLIC VIEW ──
-        // Only show approved/public contributions
+        // Only show contributions published to public (teacher-gated)
         // CRITICALLY: strip all student PII
         const publicQ = query(
           collection(db, "contributions"),
-          where("isPublic", "==", true)
+          where("isVisibleToPublic", "==", true)
         );
         const publicSnap = await getDocs(publicQ);
 
@@ -92,10 +92,11 @@ export default function SchoolLibrary() {
         );
       } else if (schoolId) {
         // ── INTERNAL VIEW ──
-        // Full details for authenticated school members
+        // Only show contributions that teacher has published to school library
         const schoolQ = query(
           collection(db, "contributions"),
-          where("schoolId", "==", schoolId)
+          where("schoolId", "==", schoolId),
+          where("isVisibleToSchool", "==", true)
         );
         const schoolSnap = await getDocs(schoolQ);
 

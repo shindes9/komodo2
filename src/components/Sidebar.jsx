@@ -1,16 +1,16 @@
+import { useEffect, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { signOut } from "firebase/auth";
-import { auth } from "../firebase";
+import { auth, db } from "../firebase";
 import { useAuth } from "../context/AuthContext";
+import { collection, query, where, getDocs } from "firebase/firestore";
 import "./Sidebar.css";
 
 /**
  * Sidebar Navigation — RBAC-aware
- * 
+ *
  * Dynamically shows/hides tabs based on user role.
- * Public visitors: NO sidebar links.
- * Admin: NO messaging (platform-wide admin).
- * All logged-in roles get a "Public Library" link.
+ * For students: includes "My Canvas" summary with contribution stats.
  */
 
 /** Map role to its home dashboard path */
@@ -27,18 +27,19 @@ const navLinks = {
   student: [
     { label: "Dashboard", path: "/student", icon: "\u{1F3E0}", tooltip: "View your student dashboard" },
     { label: "My Programs", path: "/student/enrol", icon: "\u{1F4DA}", tooltip: "Browse and enrol in conservation programs" },
-    { label: "My Work", path: "/student/sightings", icon: "\u{1F4DD}", tooltip: "Submit and view your conservation work" },
+    { label: "My Work", path: "/student/sightings", icon: "\u{1F4DD}", tooltip: "Submit new conservation work" },
+    { label: "Past Submissions", path: "/student/past-submissions", icon: "\u{1F4CB}", tooltip: "View all your past submissions and feedback" },
     { label: "Library", path: "/student/library", icon: "\u{1F4D6}", tooltip: "Browse your school's contribution library" },
     { label: "Messages", path: "/student/messages", icon: "\u{2709}\uFE0F", tooltip: "Message your school teachers and classmates" },
     { label: "Species Quiz", path: "/student/quiz", icon: "🎮", tooltip: "Test your species knowledge" },
-    { label: "My Canvas", path: "/student/profile", icon: "\u{1F3A8}", tooltip: "View your work canvas" },
+    { label: "My Canvas", path: "/student/profile", icon: "\u{1F3A8}", tooltip: "View your work canvas and portfolio" },
     { label: "Settings", path: "/settings", icon: "\u{2699}\uFE0F", tooltip: "Profile settings" },
     { label: "Public Library", path: "/student/public-library", icon: "\u{1F30D}", tooltip: "Browse the public species library and showcase" },
   ],
   teacher: [
     { label: "Dashboard", path: "/teacher", icon: "\u{1F3E0}", tooltip: "View your teacher dashboard" },
-    { label: "Sighting Reports", path: "/teacher/sightings", icon: "\u{1F50D}", tooltip: "Review student sighting reports" },
-    { label: "School Library", path: "/teacher/library", icon: "\u{1F4D6}", tooltip: "Review student submissions from your school" },
+    { label: "Review Dashboard", path: "/teacher/library", icon: "\u{1F50D}", tooltip: "Review and manage student submissions" },
+    { label: "Sighting Reports", path: "/teacher/sightings", icon: "\u{1F4CB}", tooltip: "Review legacy sighting reports" },
     { label: "Messages", path: "/teacher/messages", icon: "\u{2709}\uFE0F", tooltip: "Message students and principal at your school" },
     { label: "Settings", path: "/settings", icon: "\u{2699}\uFE0F", tooltip: "Profile settings" },
     { label: "Public Library", path: "/teacher/public-library", icon: "\u{1F30D}", tooltip: "Browse the public species library and showcase" },
@@ -60,6 +61,7 @@ const navLinks = {
   member: [
     { label: "Dashboard", path: "/member", icon: "\u{1F3E0}", tooltip: "View your member dashboard" },
     { label: "My Contributions", path: "/member/sightings", icon: "\u{1F4DD}", tooltip: "Submit articles and sighting reports" },
+    { label: "Past Submissions", path: "/member/past-submissions", icon: "\u{1F4CB}", tooltip: "View all your past submissions and feedback" },
     { label: "Community Library", path: "/member/library", icon: "\u{1F4D6}", tooltip: "Browse your community's contribution library" },
     { label: "My Canvas", path: "/member/profile", icon: "\u{1F3A8}", tooltip: "View your public canvas" },
     { label: "Messages", path: "/member/messages", icon: "\u{2709}\uFE0F", tooltip: "Message community members" },
@@ -78,8 +80,36 @@ export default function Sidebar() {
   const location = useLocation();
   const { user, userData, role } = useAuth();
 
+  const [totalContributions, setTotalContributions] = useState(0);
+  const [reviewedCount, setReviewedCount] = useState(0);
+
   const links = navLinks[role] || [];
   const homePath = roleDashboardPath[role] || "/";
+
+  const showCanvasStats = role === "student" || role === "member";
+
+  useEffect(() => {
+    if (!user || !showCanvasStats) return;
+
+    const fetchStats = async () => {
+      try {
+        const q = query(
+          collection(db, "contributions"),
+          where("studentId", "==", user.uid)
+        );
+        const snap = await getDocs(q);
+        setTotalContributions(snap.size);
+        const reviewed = snap.docs.filter(
+          (d) => d.data().status !== "pending"
+        ).length;
+        setReviewedCount(reviewed);
+      } catch (err) {
+        console.error("Error fetching canvas stats:", err);
+      }
+    };
+
+    fetchStats();
+  }, [user, showCanvasStats]);
 
   const handleLogout = async () => {
     try {
@@ -101,6 +131,21 @@ export default function Sidebar() {
         <div className="sidebar-logo">K</div>
         <span className="sidebar-title">Komodo Hub</span>
       </div>
+
+      {/* My Canvas Stats for students/members */}
+      {showCanvasStats && (
+        <div className="sidebar-canvas-stats">
+          <div className="sidebar-canvas-title">My Canvas</div>
+          <div className="sidebar-canvas-row">
+            <span className="sidebar-canvas-label">Total Contributions</span>
+            <span className="sidebar-canvas-value">{totalContributions}</span>
+          </div>
+          <div className="sidebar-canvas-row">
+            <span className="sidebar-canvas-label">Learning Progress</span>
+            <span className="sidebar-canvas-value">{reviewedCount}</span>
+          </div>
+        </div>
+      )}
 
       <nav className="sidebar-nav">
         {links.map((link) => (

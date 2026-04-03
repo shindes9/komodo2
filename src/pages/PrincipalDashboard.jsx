@@ -15,7 +15,7 @@ import {
 import "./PrincipalDashboard.css";
 
 export default function PrincipalDashboard() {
-  const { user, schoolId: authSchoolId } = useAuth();
+  const { user, userData, schoolId: authSchoolId } = useAuth();
   const [teachers, setTeachers] = useState([]);
   const [loadingTeachers, setLoadingTeachers] = useState(true);
 
@@ -322,7 +322,7 @@ export default function PrincipalDashboard() {
   return (
     <div className="principal-dashboard">
       <div className="principal-welcome">
-        <h2>Welcome back, {user?.email}</h2>
+        <h2>Welcome back, {userData?.displayName || user?.email}</h2>
         <p className="principal-date">{today}</p>
       </div>
 

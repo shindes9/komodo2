@@ -137,7 +137,7 @@ export default function MemberDashboard() {
   return (
     <div className="member-dashboard">
       <div className="member-welcome">
-        <h2>Welcome, {user?.email}</h2>
+        <h2>Welcome, {userData?.displayName || user?.email}</h2>
         <p className="member-date">{today}</p>
         {orgName && <p className="member-org">🏢 {orgName}</p>}
       </div>
