@@ -48,11 +48,16 @@ export function AuthProvider({ children }) {
         userRef,
         async (userSnap) => {
           if (!userSnap.exists()) {
-            // Document is being created (registration race) — keep loading spinner
+            // Document is being created (registration race) — keep loading spinner active
             return;
           }
 
           const data = userSnap.data();
+          
+          // Dual-Wait: Ensure the document has actually populated with core attributes
+          if (!data.role) {
+            return;
+          }
           const userRole = data.role || null;
           const userSchoolId = data.schoolId || null;
           const userOrgId = data.orgId || null;

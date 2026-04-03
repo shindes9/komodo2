@@ -96,7 +96,7 @@ export default function SchoolLibrary() {
         const schoolQ = query(
           collection(db, "contributions"),
           where("schoolId", "==", schoolId),
-          where("isVisibleToSchool", "==", true)
+          where("isVisibleInSchool", "==", true)
         );
         const schoolSnap = await getDocs(schoolQ);
 

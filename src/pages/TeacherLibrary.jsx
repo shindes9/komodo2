@@ -24,8 +24,8 @@ import "./SchoolLibrary.css";
  *
  * Actions:
  *   - "Save Feedback" → status: "reviewed", sends notification
- *   - "Publish to School Library" → isVisibleToSchool: true
- *   - "Publish to Public Showcase" → isVisibleToPublic: true, isPublic: true
+ *   - "Publish to School Library" → isVisibleInSchool: true
+ *   - "Publish to Public Showcase" → isVisibleInPublic: true, isPublic: true
  *   - "Archive" → reverts visibility flags
  */
 export default function TeacherLibrary() {
@@ -72,9 +72,8 @@ export default function TeacherLibrary() {
           feedbackDate: data.feedbackDate || null,
           teacherNote: data.teacherNote || "",
           createdAt: data.createdAt,
-          isVisibleToSchool: data.isVisibleToSchool || false,
-          isVisibleToPublic: data.isVisibleToPublic || false,
-          isPublished: data.isPublished || false,
+          isVisibleInSchool: data.isVisibleInSchool || false,
+          isVisibleInPublic: data.isVisibleInPublic || false,
           isPublic: data.isPublic || false,
         };
       });
@@ -144,7 +143,7 @@ export default function TeacherLibrary() {
   };
 
   /**
-   * Publish to School Library — sets isVisibleToSchool: true.
+   * Publish to School Library — sets isVisibleInSchool: true.
    */
   const handlePublishToSchool = async () => {
     if (!selectedItem) return;
@@ -153,7 +152,7 @@ export default function TeacherLibrary() {
     try {
       const teacherName = userData?.displayName || user.email;
       await updateDoc(doc(db, "contributions", selectedItem.id), {
-        isVisibleToSchool: true,
+        isVisibleInSchool: true,
         status: selectedItem.status === "pending" ? "reviewed" : selectedItem.status,
       });
 
@@ -168,10 +167,10 @@ export default function TeacherLibrary() {
       const newStatus = selectedItem.status === "pending" ? "reviewed" : selectedItem.status;
       setItems((prev) =>
         prev.map((i) =>
-          i.id === selectedItem.id ? { ...i, isVisibleToSchool: true, status: newStatus } : i
+          i.id === selectedItem.id ? { ...i, isVisibleInSchool: true, status: newStatus } : i
         )
       );
-      setSelectedItem((prev) => ({ ...prev, isVisibleToSchool: true, status: newStatus }));
+      setSelectedItem((prev) => ({ ...prev, isVisibleInSchool: true, status: newStatus }));
     } catch (err) {
       console.error("Error publishing to school library:", err);
     } finally {
@@ -180,7 +179,7 @@ export default function TeacherLibrary() {
   };
 
   /**
-   * Publish to Public Showcase — sets isVisibleToPublic: true, isPublic: true.
+   * Publish to Public Showcase — sets isVisibleInPublic: true, isPublic: true.
    */
   const handlePublishToPublic = async () => {
     if (!selectedItem) return;
@@ -189,7 +188,7 @@ export default function TeacherLibrary() {
     try {
       const teacherName = userData?.displayName || user.email;
       await updateDoc(doc(db, "contributions", selectedItem.id), {
-        isVisibleToPublic: true,
+        isVisibleInPublic: true,
         isPublic: true,
         isPublished: true,
         publishedAt: serverTimestamp(),
@@ -210,13 +209,13 @@ export default function TeacherLibrary() {
       setItems((prev) =>
         prev.map((i) =>
           i.id === selectedItem.id
-            ? { ...i, isVisibleToPublic: true, isPublic: true, isPublished: true, status: newStatus }
+            ? { ...i, isVisibleInPublic: true, isPublic: true, isPublished: true, status: newStatus }
             : i
         )
       );
       setSelectedItem((prev) => ({
         ...prev,
-        isVisibleToPublic: true,
+        isVisibleInPublic: true,
         isPublic: true,
         isPublished: true,
         status: newStatus,
@@ -237,8 +236,8 @@ export default function TeacherLibrary() {
 
     try {
       await updateDoc(doc(db, "contributions", selectedItem.id), {
-        isVisibleToSchool: false,
-        isVisibleToPublic: false,
+        isVisibleInSchool: false,
+        isVisibleInPublic: false,
         isPublished: false,
         isPublic: false,
       });
@@ -246,14 +245,14 @@ export default function TeacherLibrary() {
       setItems((prev) =>
         prev.map((i) =>
           i.id === selectedItem.id
-            ? { ...i, isVisibleToSchool: false, isVisibleToPublic: false, isPublished: false, isPublic: false }
+            ? { ...i, isVisibleInSchool: false, isVisibleInPublic: false, isPublished: false, isPublic: false }
             : i
         )
       );
       setSelectedItem((prev) => ({
         ...prev,
-        isVisibleToSchool: false,
-        isVisibleToPublic: false,
+        isVisibleInSchool: false,
+        isVisibleInPublic: false,
         isPublished: false,
         isPublic: false,
       }));
@@ -292,8 +291,8 @@ export default function TeacherLibrary() {
 
   const pendingCount = items.filter((i) => i.status === "pending").length;
   const reviewedCount = items.filter((i) => i.status === "reviewed").length;
-  const publishedSchoolCount = items.filter((i) => i.isVisibleToSchool).length;
-  const publishedPublicCount = items.filter((i) => i.isVisibleToPublic).length;
+  const publishedSchoolCount = items.filter((i) => i.isVisibleInSchool).length;
+  const publishedPublicCount = items.filter((i) => i.isVisibleInPublic).length;
 
   return (
     <div className="school-library-page">
@@ -382,12 +381,12 @@ export default function TeacherLibrary() {
                   </div>
                   <div className="sl-list-item-author">By: {item.studentEmail}</div>
                   <div style={{ display: "flex", gap: "4px", marginTop: "4px", flexWrap: "wrap" }}>
-                    {item.isVisibleToSchool && (
+                    {item.isVisibleInSchool && (
                       <span style={{ fontSize: "10px", background: "#e8f5e9", color: "#2E7D32", padding: "2px 6px", borderRadius: "6px", fontWeight: 600 }}>
                         School
                       </span>
                     )}
-                    {item.isVisibleToPublic && (
+                    {item.isVisibleInPublic && (
                       <span style={{ fontSize: "10px", background: "#e3f2fd", color: "#1565c0", padding: "2px 6px", borderRadius: "6px", fontWeight: 600 }}>
                         Public
                       </span>
@@ -441,7 +440,7 @@ export default function TeacherLibrary() {
                 {/* ── GATEKEEPER ACTIONS ── */}
                 <div className="sl-publish-section" style={{ display: "flex", gap: "10px", flexWrap: "wrap", marginTop: "16px", padding: "16px", background: "#f8faf8", borderRadius: "10px", border: "1px solid #e0e0e0" }}>
                   {/* Publish to School Library */}
-                  {selectedItem.isVisibleToSchool ? (
+                  {selectedItem.isVisibleInSchool ? (
                     <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
                       <span style={{ fontSize: "13px", color: "#2E7D32", fontWeight: 600 }}>✅ In School Library</span>
                     </div>
@@ -466,7 +465,7 @@ export default function TeacherLibrary() {
                   )}
 
                   {/* Publish to Public Showcase */}
-                  {selectedItem.isVisibleToPublic ? (
+                  {selectedItem.isVisibleInPublic ? (
                     <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
                       <span style={{ fontSize: "13px", color: "#1565c0", fontWeight: 600 }}>✅ In Public Showcase</span>
                     </div>
@@ -491,7 +490,7 @@ export default function TeacherLibrary() {
                   )}
 
                   {/* Archive button — only show if published somewhere */}
-                  {(selectedItem.isVisibleToSchool || selectedItem.isVisibleToPublic) && (
+                  {(selectedItem.isVisibleInSchool || selectedItem.isVisibleInPublic) && (
                     <button
                       onClick={handleArchive}
                       disabled={publishing}

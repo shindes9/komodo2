@@ -103,7 +103,8 @@ export default function SightingReport() {
 
       const contributionData = {
         studentId: user.uid,
-        studentEmail: userData?.displayName || user.email,
+        studentEmail: user.email,
+        studentName: userData?.displayName || user.email,
         schoolId: schoolId || null,
         title: reportTitle,
         type: contributionType,
@@ -114,33 +115,18 @@ export default function SightingReport() {
         description: description.trim(),
         photoURL,
         status: "pending",
-        feedback: [],
+        feedback: "",
         teacherFeedback: "",
         feedbackDate: null,
-        isVisibleToSchool: false,
-        isVisibleToPublic: false,
+        isVisibleInSchool: false,
+        isVisibleInPublic: false,
         isPublic: false,
         createdAt: serverTimestamp(),
       };
 
       await addDoc(collection(db, "contributions"), contributionData);
 
-      // Also add to sightings collection for backward compat (only for sighting reports)
-      if (contributionType === "Sighting Report") {
-        await addDoc(collection(db, "sightings"), {
-          userId: user.uid,
-          userEmail: userData?.displayName || user.email,
-          species,
-          location: location.trim(),
-          date,
-          time,
-          description: description.trim(),
-          photoURL,
-          status: "pending",
-          teacherNote: "",
-          createdAt: serverTimestamp(),
-        });
-      }
+      // Legacy sightings collection dual-write removed to prevent split logic
 
       // Notify teachers
       if (schoolId) {

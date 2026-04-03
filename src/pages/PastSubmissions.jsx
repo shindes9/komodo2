@@ -7,6 +7,7 @@ import {
   query,
   where,
   getDocs,
+  onSnapshot,
   orderBy,
 } from "firebase/firestore";
 import "./PastSubmissions.css";
@@ -30,36 +31,35 @@ export default function PastSubmissions() {
   );
 
   useEffect(() => {
-    if (!user) return;
-    fetchReports();
-  }, [user]);
-
-  useEffect(() => {
     if (successMessage) {
       const timer = setTimeout(() => setSuccessMessage(""), 5000);
       return () => clearTimeout(timer);
     }
   }, [successMessage]);
 
-  const fetchReports = async () => {
-    try {
-      const q = query(
-        collection(db, "contributions"),
-        where("studentId", "==", user.uid),
-        orderBy("createdAt", "desc")
-      );
-      const snapshot = await getDocs(q);
+  useEffect(() => {
+    if (!user) return;
+
+    const q = query(
+      collection(db, "contributions"),
+      where("studentId", "==", user.uid),
+      orderBy("createdAt", "desc")
+    );
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
       const data = snapshot.docs.map((doc) => ({
         id: doc.id,
         ...doc.data(),
       }));
       setReports(data);
-    } catch (err) {
-      console.error("Error fetching past submissions:", err);
-    } finally {
       setLoading(false);
-    }
-  };
+    }, (err) => {
+      console.error("Error fetching past submissions:", err);
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, [user]);
 
   const getStatusLabel = (status) => {
     switch (status) {
@@ -206,12 +206,12 @@ export default function PastSubmissions() {
 
               {/* Visibility badges */}
               <div style={{ display: "flex", gap: "6px", marginTop: "8px" }}>
-                {r.isVisibleToSchool && (
+                {r.isVisibleInSchool && (
                   <span style={{ fontSize: "11px", background: "#e8f5e9", color: "#2E7D32", padding: "2px 8px", borderRadius: "10px", fontWeight: 600 }}>
                     In School Library
                   </span>
                 )}
-                {(r.isVisibleToPublic || r.isPublic) && (
+                {(r.isVisibleInPublic || r.isPublic) && (
                   <span style={{ fontSize: "11px", background: "#e3f2fd", color: "#1565c0", padding: "2px 8px", borderRadius: "10px", fontWeight: 600 }}>
                     In Public Showcase
                   </span>

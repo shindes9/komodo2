@@ -195,7 +195,7 @@ export default function PublicLibrary() {
       // Only load contributions published to public by teacher (gatekeeper)
       const publicQ = query(
         collection(db, "contributions"),
-        where("isVisibleToPublic", "==", true)
+        where("isVisibleInPublic", "==", true)
       );
       const contribSnap = await getDocs(publicQ);
       const schoolCache = {};
