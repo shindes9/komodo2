@@ -14,7 +14,7 @@ import {
   serverTimestamp,
   or,
 } from "firebase/firestore";
-import { createNotification } from "../utils/notifications";
+import { createNotification, markMessageNotificationsRead } from "../utils/notifications";
 import "./Messages.css";
 
 /**
@@ -382,6 +382,8 @@ export default function Messages() {
     setSelectedUserRole(conv.role || "");
     setShowNewChat(false);
     setSendError("");
+    // Mark message notifications from this sender as read (read-trigger)
+    markMessageNotificationsRead(user.uid, conv.userId);
   };
 
   const handleToggleNewChat = () => {
@@ -397,6 +399,8 @@ export default function Messages() {
     setShowNewChat(false);
     setAvailableContacts([]);
     setSendError("");
+    // Mark message notifications from this sender as read (read-trigger)
+    markMessageNotificationsRead(user.uid, contact.id);
   };
 
   // ────────────────────────────────────────────────────────────────
@@ -473,8 +477,13 @@ export default function Messages() {
         read: false,
       });
 
-      // Notify recipient (include schoolId/orgId for walled-garden filtering)
-      createNotification(selectedUserId, `New message from ${userData?.displayName || user.email}`, schoolId || orgId);
+      // Notify recipient — include type and senderId for targeted read-trigger
+      createNotification(
+        selectedUserId,
+        `New message from ${userData?.displayName || user.email}`,
+        schoolId || orgId,
+        { type: "message", senderId: user.uid }
+      );
       setNewMessage("");
     } catch (err) {
       console.error("Error sending message:", err);

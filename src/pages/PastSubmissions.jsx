@@ -10,6 +10,7 @@ import {
   onSnapshot,
   orderBy,
 } from "firebase/firestore";
+import { markFeedbackNotificationRead } from "../utils/notifications";
 import "./PastSubmissions.css";
 
 /**
@@ -173,7 +174,11 @@ export default function PastSubmissions() {
             <div
               key={r.id}
               className="ps-item"
-              onClick={() => setSelectedReport(r)}
+              onClick={() => {
+                setSelectedReport(r);
+                // Read-trigger: mark feedback notifications for this submission as read
+                markFeedbackNotificationRead(user?.uid, r.id);
+              }}
               style={{ cursor: "pointer" }}
             >
               <div className="ps-item-top">

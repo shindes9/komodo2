@@ -123,7 +123,8 @@ export default function TeacherLibrary() {
         createNotification(
           selectedItem.studentId,
           `Teacher ${teacherName} has reviewed your submission: "${selectedItem.title}"`,
-          schoolId
+          schoolId,
+          { type: "feedback", senderId: user.uid, contributionId: selectedItem.id }
         );
       }
 
@@ -160,7 +161,8 @@ export default function TeacherLibrary() {
         createNotification(
           selectedItem.studentId,
           `Your submission "${selectedItem.title}" has been published to the School Library by ${teacherName}!`,
-          schoolId
+          schoolId,
+          { type: "published", senderId: user.uid, contributionId: selectedItem.id }
         );
       }
 
@@ -201,7 +203,8 @@ export default function TeacherLibrary() {
         createNotification(
           selectedItem.studentId,
           `Your submission "${selectedItem.title}" has been published to the Public Showcase by ${teacherName}!`,
-          schoolId
+          schoolId,
+          { type: "published", senderId: user.uid, contributionId: selectedItem.id }
         );
       }
 
