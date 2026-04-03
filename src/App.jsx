@@ -19,6 +19,8 @@ import StudentProfile from "./pages/StudentProfile";
 import CommunityDashboard from "./pages/CommunityDashboard";
 import MemberDashboard from "./pages/MemberDashboard";
 import MemberProfile from "./pages/MemberProfile";
+import ProfileSettings from "./pages/ProfileSettings";
+import CommunityLibrary from "./pages/CommunityLibrary";
 import NotFound from "./pages/NotFound";
 import "./App.css";
 
@@ -180,6 +182,17 @@ export default function App() {
           }
         />
 
+        <Route
+          path="/teacher/profile"
+          element={
+            <ProtectedRoute allowedRoles={["teacher"]}>
+              <DashboardLayout title="My Profile">
+                <ProfileSettings />
+              </DashboardLayout>
+            </ProtectedRoute>
+          }
+        />
+
         {/* ── Principal Routes ── */}
         <Route
           path="/principal"
@@ -225,6 +238,17 @@ export default function App() {
           }
         />
 
+        <Route
+          path="/principal/profile"
+          element={
+            <ProtectedRoute allowedRoles={["principal"]}>
+              <DashboardLayout title="My Profile">
+                <ProfileSettings />
+              </DashboardLayout>
+            </ProtectedRoute>
+          }
+        />
+
         {/* ══ COMMUNITY ROUTES ══ */}
 
         {/* Chairman Dashboard */}
@@ -244,7 +268,7 @@ export default function App() {
           element={
             <ProtectedRoute allowedRoles={["chairman"]}>
               <DashboardLayout title="Community Library">
-                <SchoolLibrary />
+                <CommunityLibrary />
               </DashboardLayout>
             </ProtectedRoute>
           }
@@ -307,6 +331,17 @@ export default function App() {
         />
 
         <Route
+          path="/member/library"
+          element={
+            <ProtectedRoute allowedRoles={["member"]}>
+              <DashboardLayout title="Community Library">
+                <CommunityLibrary />
+              </DashboardLayout>
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
           path="/member/messages"
           element={
             <ProtectedRoute allowedRoles={["member"]}>
@@ -362,6 +397,17 @@ export default function App() {
             <ProtectedRoute allowedRoles={["admin"]}>
               <DashboardLayout title="Public Library">
                 <PublicLibrary />
+              </DashboardLayout>
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/admin/profile"
+          element={
+            <ProtectedRoute allowedRoles={["admin"]}>
+              <DashboardLayout title="My Profile">
+                <ProfileSettings />
               </DashboardLayout>
             </ProtectedRoute>
           }

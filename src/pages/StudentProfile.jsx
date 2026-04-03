@@ -49,7 +49,9 @@ export default function StudentProfile() {
 
   const [sightings, setSightings] = useState([]);
   const [enrollments, setEnrollments] = useState([]);
+  const [contributions, setContributions] = useState([]);
   const [loadingContributions, setLoadingContributions] = useState(true);
+  const [bio, setBio] = useState("");
 
   useEffect(() => {
     if (!user) return;
@@ -62,6 +64,7 @@ export default function StudentProfile() {
           setDisplayName(data.displayName || "");
           setAvatar(data.avatar || "🦎");
           setAccentColor(data.accentColor || "#2E7D32");
+          setBio(data.bio || "");
         }
       } catch (err) {
         console.error("Error loading profile:", err);
@@ -90,6 +93,16 @@ export default function StudentProfile() {
         setEnrollments(
           enrollSnap.docs.map((d) => ({ id: d.id, ...d.data() }))
         );
+
+        // Fetch contributions (with teacher feedback)
+        const contribQ = query(
+          collection(db, "contributions"),
+          where("studentId", "==", user.uid)
+        );
+        const contribSnap = await getDocs(contribQ);
+        setContributions(
+          contribSnap.docs.map((d) => ({ id: d.id, ...d.data() }))
+        );
       } catch (err) {
         console.error("Error loading contributions:", err);
       } finally {
@@ -108,6 +121,7 @@ export default function StudentProfile() {
     try {
       await updateDoc(doc(db, "users", user.uid), {
         displayName: displayName.trim(),
+        bio: bio.trim(),
         avatar,
         accentColor,
       });
@@ -190,6 +204,16 @@ export default function StudentProfile() {
             </div>
 
             <div className="profile-field">
+              <label>Bio</label>
+              <textarea
+                value={bio}
+                onChange={(e) => setBio(e.target.value)}
+                placeholder="Write a short bio about yourself..."
+                style={{ resize: "vertical", minHeight: "60px", fontFamily: "inherit", padding: "10px", borderRadius: "8px", border: "1px solid #d7e3d9", fontSize: "14px", width: "100%", boxSizing: "border-box" }}
+              />
+            </div>
+
+            <div className="profile-field">
               <label>Accent Color</label>
               <div className="color-options">
                 {colorOptions.map((c) => (
@@ -223,10 +247,45 @@ export default function StudentProfile() {
 
         {loadingContributions ? (
           <p className="loading-text">Loading...</p>
-        ) : sightings.length === 0 ? (
-          <p className="empty-text">No sighting reports yet.</p>
+        ) : contributions.length === 0 && sightings.length === 0 ? (
+          <p className="empty-text">No contributions or sighting reports yet.</p>
         ) : (
           <div className="contributions-list">
+            {/* Contributions from contributions collection (with feedback) */}
+            {contributions.map((c) => (
+              <div key={c.id} className="contribution-item">
+                <div className="contribution-header">
+                  <span className="contribution-title">
+                    {c.title || `${c.species || "Unknown"} Sighting`}
+                  </span>
+                  <span className={`contribution-status status-${c.status || "pending"}`}>
+                    {c.status || "pending"}
+                  </span>
+                </div>
+                <p className="contribution-desc">{c.description}</p>
+                {c.date && <span className="contribution-date">{c.date}</span>}
+
+                {/* Teacher Feedback Thread */}
+                {c.feedback && c.feedback.length > 0 && (
+                  <div className="contribution-feedback-section">
+                    <strong style={{ color: "#2E7D32", fontSize: "13px" }}>Teacher Feedback:</strong>
+                    {c.feedback.map((fb, idx) => (
+                      <div key={idx} style={{ background: "#f4f8f4", padding: "8px 12px", borderRadius: "8px", marginTop: "6px", borderLeft: "3px solid #2E7D32" }}>
+                        <div style={{ fontSize: "12px", color: "#2E7D32", fontWeight: 700 }}>{fb.teacherEmail || "Teacher"}</div>
+                        <p style={{ margin: "4px 0 0 0", fontSize: "13px", color: "#333" }}>{fb.text}</p>
+                        {fb.timestamp?.seconds && (
+                          <span style={{ fontSize: "11px", color: "#999" }}>
+                            {new Date(fb.timestamp.seconds * 1000).toLocaleDateString()}
+                          </span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ))}
+
+            {/* Legacy sightings */}
             {sightings.map((s) => (
               <div key={s.id} className="contribution-item">
                 <div className="contribution-header">
@@ -234,7 +293,13 @@ export default function StudentProfile() {
                   <span className={`contribution-status status-${s.status}`}>{s.status}</span>
                 </div>
                 <p className="contribution-desc">{s.description}</p>
-                <span className="contribution-date">📅 {s.date} | 📍 {s.location}</span>
+                <span className="contribution-date">{s.date} | {s.location}</span>
+                {s.teacherNote && (
+                  <div className="contribution-feedback-section">
+                    <strong style={{ color: "#2E7D32", fontSize: "13px" }}>Teacher Note:</strong>
+                    <p style={{ margin: "4px 0", fontSize: "13px", color: "#333" }}>{s.teacherNote}</p>
+                  </div>
+                )}
               </div>
             ))}
           </div>
@@ -263,9 +328,9 @@ export default function StudentProfile() {
       </div>
 
       <div className="profile-card">
-        <h3>Creative Canvas</h3>
+        <h3>Progress Canvas</h3>
         <p className="canvas-desc">
-          Your conservation journey timeline - a compilation of all your work.
+          Your conservation journey timeline — a compilation of all your sightings, feedback, and programs.
         </p>
 
         {timelineItems.length === 0 ? (

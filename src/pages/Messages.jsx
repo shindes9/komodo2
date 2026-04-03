@@ -26,7 +26,7 @@ import "./Messages.css";
  * Security  : cross-school messaging is blocked; community/public have no access.
  */
 export default function Messages() {
-  const { user, role, schoolId, classIds } = useAuth();
+  const { user, role, schoolId, orgId, classIds } = useAuth();
   const navigate = useNavigate();
 
   const [conversations, setConversations] = useState([]);
@@ -42,13 +42,18 @@ export default function Messages() {
   const [availableContacts, setAvailableContacts] = useState([]);
   const [loadingContacts, setLoadingContacts] = useState(false);
 
-  // Cache of validated receiver schoolIds for cross-school check
+  // Cache of validated receiver schoolIds/orgIds for cross-org check
   const [contactSchoolMap, setContactSchoolMap] = useState({});
+  const [contactOrgMap, setContactOrgMap] = useState({});
 
   const messagesEndRef = useRef(null);
 
-  // Block community / public visitors entirely
-  const isBlocked = !user || role === "public" || role === "community" || role === "chairman" || role === "member";
+  // Determine messaging context: school-based or community-based
+  const isSchoolUser = role === "student" || role === "teacher" || role === "principal";
+  const isCommunityUser = role === "chairman" || role === "member";
+
+  // Only block public visitors and admin (admin has no messaging per spec)
+  const isBlocked = !user || role === "public";
 
   // ────────────────────────────────────────────────────────────────
   // Listener 1: all messages involving current user → conversations list
@@ -180,7 +185,12 @@ export default function Messages() {
     setAvailableContacts([]);
     setSendError("");
 
-    if (!schoolId) {
+    // Community users need orgId; school users need schoolId
+    if (isSchoolUser && !schoolId) {
+      setLoadingContacts(false);
+      return;
+    }
+    if (isCommunityUser && !orgId) {
       setLoadingContacts(false);
       return;
     }
@@ -188,6 +198,7 @@ export default function Messages() {
     try {
       let contacts = [];
       const schoolMap = {};
+      const orgMap = {};
 
       if (role === "student") {
         // Teachers in same school
@@ -300,16 +311,67 @@ export default function Messages() {
             schoolMap[d.id] = data.schoolId;
           }
         });
+      } else if (role === "chairman") {
+        // ── COMMUNITY: Chairman can message all members in their org ──
+        const memberQ = query(
+          collection(db, "users"),
+          where("role", "==", "member"),
+          where("orgId", "==", orgId)
+        );
+        const memberSnap = await getDocs(memberQ);
+        memberSnap.docs.forEach((d) => {
+          if (d.id !== user.uid) {
+            const data = d.data();
+            contacts.push({ id: d.id, email: data.email, role: "member", orgId: data.orgId });
+            orgMap[d.id] = data.orgId;
+          }
+        });
+      } else if (role === "member") {
+        // ── COMMUNITY: Member can message chairman + other members in their org ──
+        const addedIds = new Set();
+
+        // Chairman
+        const chairQ = query(
+          collection(db, "users"),
+          where("role", "==", "chairman"),
+          where("orgId", "==", orgId)
+        );
+        const chairSnap = await getDocs(chairQ);
+        chairSnap.docs.forEach((d) => {
+          if (d.id !== user.uid && !addedIds.has(d.id)) {
+            addedIds.add(d.id);
+            const data = d.data();
+            contacts.push({ id: d.id, email: data.email, role: "chairman", orgId: data.orgId });
+            orgMap[d.id] = data.orgId;
+          }
+        });
+
+        // Other members
+        const otherMemberQ = query(
+          collection(db, "users"),
+          where("role", "==", "member"),
+          where("orgId", "==", orgId)
+        );
+        const otherMemberSnap = await getDocs(otherMemberQ);
+        otherMemberSnap.docs.forEach((d) => {
+          if (d.id !== user.uid && !addedIds.has(d.id)) {
+            addedIds.add(d.id);
+            const data = d.data();
+            contacts.push({ id: d.id, email: data.email, role: "member", orgId: data.orgId });
+            orgMap[d.id] = data.orgId;
+          }
+        });
       }
 
       setContactSchoolMap(schoolMap);
+      setContactOrgMap(orgMap);
       setAvailableContacts(contacts);
     } catch (err) {
       console.error("Error loading contacts:", err);
     } finally {
       setLoadingContacts(false);
     }
-  }, [user, role, schoolId, classIds]);
+  }, [user, role, schoolId, orgId, classIds, isSchoolUser, isCommunityUser]);
 
   // ────────────────────────────────────────────────────────────────
   // Conversation selection helpers
@@ -341,24 +403,41 @@ export default function Messages() {
   // RBAC validation before send
   // ────────────────────────────────────────────────────────────────
   const validateSend = async (receiverId) => {
-    if (!user || role === "public" || role === "community" || role === "chairman" || role === "member") {
+    if (!user || role === "public") {
       return "You do not have permission to send messages.";
     }
     if (receiverId === user.uid) return "You cannot send a message to yourself.";
 
-    // Cross-school check
-    let receiverSchoolId = contactSchoolMap[receiverId];
-    if (!receiverSchoolId) {
-      try {
-        const receiverDoc = await getDoc(doc(db, "users", receiverId));
-        if (receiverDoc.exists()) receiverSchoolId = receiverDoc.data().schoolId;
-      } catch {
-        return "Unable to verify recipient. Please try again.";
-      }
-    }
+    try {
+      const receiverDoc = await getDoc(doc(db, "users", receiverId));
+      if (!receiverDoc.exists()) return "Recipient not found.";
+      const receiverData = receiverDoc.data();
 
-    if (schoolId && receiverSchoolId && schoolId !== receiverSchoolId) {
-      return "You cannot send messages to users outside your school.";
+      // School users: cross-school block
+      if (isSchoolUser) {
+        const receiverSchoolId = contactSchoolMap[receiverId] || receiverData.schoolId;
+        if (schoolId && receiverSchoolId && schoolId !== receiverSchoolId) {
+          return "You cannot send messages to users outside your school.";
+        }
+        // Block school→community messaging
+        if (receiverData.orgId && !receiverData.schoolId) {
+          return "You cannot send messages to community members from a school account.";
+        }
+      }
+
+      // Community users: cross-org block
+      if (isCommunityUser) {
+        const receiverOrgId = contactOrgMap[receiverId] || receiverData.orgId;
+        if (orgId && receiverOrgId && orgId !== receiverOrgId) {
+          return "You cannot send messages to users outside your organization.";
+        }
+        // Block community→school messaging
+        if (receiverData.schoolId && !receiverData.orgId) {
+          return "You cannot send messages to school members from a community account.";
+        }
+      }
+    } catch {
+      return "Unable to verify recipient. Please try again.";
     }
 
     return null;
@@ -387,14 +466,15 @@ export default function Messages() {
         receiverEmail: selectedUserEmail,
         receiverRole: selectedUserRole,
         schoolId: schoolId || null,
+        orgId: orgId || null,
         content: newMessage.trim(),
         text: newMessage.trim(),
         timestamp: serverTimestamp(),
         read: false,
       });
 
-      // Notify recipient (include schoolId for walled-garden filtering)
-      createNotification(selectedUserId, `New message from ${user.email}`, schoolId);
+      // Notify recipient (include schoolId/orgId for walled-garden filtering)
+      createNotification(selectedUserId, `New message from ${user.email}`, schoolId || orgId);
       setNewMessage("");
     } catch (err) {
       console.error("Error sending message:", err);
@@ -429,12 +509,16 @@ export default function Messages() {
     if (r === "teacher") return "role-badge-teacher";
     if (r === "principal") return "role-badge-principal";
     if (r === "student") return "role-badge-student";
+    if (r === "chairman") return "role-badge-principal";
+    if (r === "member") return "role-badge-student";
     return "role-badge-default";
   };
 
   const backPath =
     role === "teacher" ? "/teacher" :
     role === "principal" ? "/principal" :
+    role === "chairman" ? "/community" :
+    role === "member" ? "/member" :
     "/student";
 
   // ────────────────────────────────────────────────────────────────
@@ -446,8 +530,8 @@ export default function Messages() {
         <div className="messages-blocked">
           <div className="blocked-icon">🔒</div>
           <h3>Access Denied</h3>
-          <p>The messaging system is only available to school members (students, teachers, and principals).</p>
-          <p className="blocked-note">Community members and public visitors do not have access to internal messaging.</p>
+          <p>The messaging system is only available to registered school and community members.</p>
+          <p className="blocked-note">Please log in to access messaging.</p>
         </div>
       </div>
     );
@@ -481,6 +565,8 @@ export default function Messages() {
             {role === "student" && <span>You can message teachers and classmates within your school.</span>}
             {role === "teacher" && <span>You can message your students and the school principal.</span>}
             {role === "principal" && <span>You can message teachers at your school.</span>}
+            {role === "chairman" && <span>You can message members within your community organization.</span>}
+            {role === "member" && <span>You can message your chairman and other members in your organization.</span>}
           </div>
 
           {showNewChat && (
@@ -488,7 +574,10 @@ export default function Messages() {
               <p className="new-chat-label">
                 {role === "student" ? "Teachers & Classmates:" :
                  role === "teacher" ? "Students & Staff:" :
-                 "School Teachers:"}
+                 role === "principal" ? "School Teachers:" :
+                 role === "chairman" ? "Community Members:" :
+                 role === "member" ? "Chairman & Members:" :
+                 "Contacts:"}
               </p>
               {loadingContacts ? (
                 <p className="loading-text">Loading contacts...</p>

@@ -150,6 +150,7 @@ export default function TeacherLibrary() {
       await updateDoc(doc(db, "contributions", selectedItem.id), {
         isPublished: true,
         isPublic: true,
+        status: "published",
         publishedAt: serverTimestamp(),
         publishedBy: user.uid,
         publishedByEmail: user.email,
@@ -167,7 +168,7 @@ export default function TeacherLibrary() {
       setItems((prev) =>
         prev.map((i) =>
           i.id === selectedItem.id
-            ? { ...i, isPublished: true, isPublic: true }
+            ? { ...i, isPublished: true, isPublic: true, status: "published" }
             : i
         )
       );
@@ -175,9 +176,45 @@ export default function TeacherLibrary() {
         ...prev,
         isPublished: true,
         isPublic: true,
+        status: "published",
       }));
     } catch (err) {
       console.error("Error publishing to library:", err);
+    } finally {
+      setPublishing(false);
+    }
+  };
+
+  /**
+   * Archive: Revert a published submission back to internal-only.
+   * Sets isPublished: false, isPublic: false, status: "internal".
+   */
+  const handleArchive = async () => {
+    if (!selectedItem) return;
+    setPublishing(true);
+
+    try {
+      await updateDoc(doc(db, "contributions", selectedItem.id), {
+        isPublished: false,
+        isPublic: false,
+        status: "internal",
+      });
+
+      setItems((prev) =>
+        prev.map((i) =>
+          i.id === selectedItem.id
+            ? { ...i, isPublished: false, isPublic: false, status: "internal" }
+            : i
+        )
+      );
+      setSelectedItem((prev) => ({
+        ...prev,
+        isPublished: false,
+        isPublic: false,
+        status: "internal",
+      }));
+    } catch (err) {
+      console.error("Error archiving submission:", err);
     } finally {
       setPublishing(false);
     }
@@ -345,8 +382,28 @@ export default function TeacherLibrary() {
                 {/* ── PUBLISH TO PUBLIC LIBRARY (Teacher Gatekeeper) ── */}
                 <div className="sl-publish-section">
                   {selectedItem.isPublished ? (
-                    <div className="sl-published-badge">
-                      ✅ Published to Public Library
+                    <div style={{ display: "flex", gap: "10px", alignItems: "center", flexWrap: "wrap" }}>
+                      <div className="sl-published-badge">
+                        ✅ Published to Public Library
+                      </div>
+                      <button
+                        className="sl-archive-btn"
+                        onClick={handleArchive}
+                        disabled={publishing}
+                        title="Remove from Public Library and keep internal only"
+                        style={{
+                          padding: "8px 14px",
+                          background: "#fff3e0",
+                          color: "#e65100",
+                          border: "1px solid #ffcc80",
+                          borderRadius: "8px",
+                          fontSize: "13px",
+                          fontWeight: 600,
+                          cursor: "pointer",
+                        }}
+                      >
+                        {publishing ? "Archiving..." : "🔒 Archive (Internal Only)"}
+                      </button>
                     </div>
                   ) : (
                     <button

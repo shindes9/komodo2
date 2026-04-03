@@ -127,6 +127,7 @@ export default function SchoolLibrary() {
             studentEmail: data.studentEmail || "",
             photoURL: data.photoURL || "",
             status: data.status || "pending",
+            isPublished: data.isPublished || false,
             createdAt: data.createdAt,
           };
         });
@@ -251,6 +252,12 @@ export default function SchoolLibrary() {
                     {/* Show school name for public visitors */}
                     {isPublicVisitor && item.schoolName && (
                       <span className="sl-list-author">{item.schoolName}</span>
+                    )}
+                    {/* Published/Internal badge */}
+                    {!isPublicVisitor && item.isPublished && (
+                      <span style={{ fontSize: "10px", background: "#e3f2fd", color: "#1565c0", padding: "2px 6px", borderRadius: "6px", fontWeight: 600 }}>
+                        Published
+                      </span>
                     )}
                   </div>
                 </button>

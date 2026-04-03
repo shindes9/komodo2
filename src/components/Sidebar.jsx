@@ -38,12 +38,14 @@ const navLinks = {
     { label: "Sighting Reports", path: "/teacher/sightings", icon: "\u{1F50D}", tooltip: "Review student sighting reports" },
     { label: "School Library", path: "/teacher/library", icon: "\u{1F4D6}", tooltip: "Review student submissions from your school" },
     { label: "Messages", path: "/teacher/messages", icon: "\u{2709}\uFE0F", tooltip: "Message students and principal at your school" },
+    { label: "My Profile", path: "/teacher/profile", icon: "\u{1F464}", tooltip: "View and edit your profile" },
     { label: "Public Library", path: "/teacher/public-library", icon: "\u{1F30D}", tooltip: "Browse the public species library and showcase" },
   ],
   principal: [
     { label: "Dashboard", path: "/principal", icon: "\u{1F3E0}", tooltip: "Manage your school overview" },
     { label: "School Library", path: "/principal/library", icon: "\u{1F4D6}", tooltip: "View all student contributions at your school" },
     { label: "Messages", path: "/principal/messages", icon: "\u{2709}\uFE0F", tooltip: "Message teachers at your school" },
+    { label: "My Profile", path: "/principal/profile", icon: "\u{1F464}", tooltip: "View and edit your profile" },
     { label: "Public Library", path: "/principal/public-library", icon: "\u{1F30D}", tooltip: "Browse the public species library and showcase" },
   ],
   chairman: [
@@ -55,12 +57,14 @@ const navLinks = {
   member: [
     { label: "Dashboard", path: "/member", icon: "\u{1F3E0}", tooltip: "View your member dashboard" },
     { label: "My Contributions", path: "/member/sightings", icon: "\u{1F4DD}", tooltip: "Submit articles and sighting reports" },
+    { label: "Community Library", path: "/member/library", icon: "\u{1F4D6}", tooltip: "Browse your community's contribution library" },
     { label: "My Profile", path: "/member/profile", icon: "\u{1F464}", tooltip: "View and edit your public profile" },
     { label: "Messages", path: "/member/messages", icon: "\u{2709}\uFE0F", tooltip: "Message community members" },
     { label: "Public Library", path: "/member/public-library", icon: "\u{1F30D}", tooltip: "Browse the public species library and showcase" },
   ],
   admin: [
     { label: "Dashboard", path: "/admin", icon: "\u{1F3E0}", tooltip: "Platform-wide admin dashboard" },
+    { label: "My Profile", path: "/admin/profile", icon: "\u{1F464}", tooltip: "View and edit your profile" },
     { label: "Public Library", path: "/admin/public-library", icon: "\u{1F30D}", tooltip: "Browse the public species library and showcase" },
   ],
 };
