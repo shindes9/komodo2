@@ -468,3 +468,42 @@
   opacity: 0.5;
   cursor: not-allowed;
 }
+
+/* ── Publish to Public Library ── */
+.sl-publish-section {
+  margin-top: 16px;
+  margin-bottom: 12px;
+}
+
+.sl-publish-btn {
+  padding: 10px 20px;
+  background: linear-gradient(135deg, #1565c0, #1e88e5);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-weight: 700;
+  font-size: 14px;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(21, 101, 192, 0.25);
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+
+.sl-publish-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px rgba(21, 101, 192, 0.35);
+}
+
+.sl-publish-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.sl-published-badge {
+  padding: 10px 16px;
+  background: #e8f5e9;
+  color: #2E7D32;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 14px;
+  border: 1px solid #c8e6c9;
+}

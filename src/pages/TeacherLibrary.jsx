@@ -11,6 +11,7 @@ import {
   updateDoc,
   arrayUnion,
   Timestamp,
+  serverTimestamp,
 } from "firebase/firestore";
 import { createNotification } from "../utils/notifications";
 import "./SchoolLibrary.css";
@@ -33,6 +34,7 @@ export default function TeacherLibrary() {
 
   const [feedbackText, setFeedbackText] = useState("");
   const [savingFeedback, setSavingFeedback] = useState(false);
+  const [publishing, setPublishing] = useState(false);
 
   useEffect(() => {
     if (!user || !schoolId) return;
@@ -61,6 +63,8 @@ export default function TeacherLibrary() {
           feedback: data.feedback || [],
           teacherNote: data.teacherNote || "", // legacy field
           createdAt: data.createdAt,
+          isPublished: data.isPublished || false,
+          isPublic: data.isPublic || false,
         };
       });
 
@@ -130,6 +134,52 @@ export default function TeacherLibrary() {
       console.error("Error adding feedback:", err);
     } finally {
       setSavingFeedback(false);
+    }
+  };
+
+  /**
+   * Teacher Gatekeeper: Publish a submission to the Public Library.
+   * Sets isPublished: true, publishedAt timestamp, and isPublic: true.
+   * Only teachers (and principals) can trigger this — students never see this button.
+   */
+  const handlePublish = async () => {
+    if (!selectedItem) return;
+    setPublishing(true);
+
+    try {
+      await updateDoc(doc(db, "contributions", selectedItem.id), {
+        isPublished: true,
+        isPublic: true,
+        publishedAt: serverTimestamp(),
+        publishedBy: user.uid,
+        publishedByEmail: user.email,
+      });
+
+      // Notify the student
+      if (selectedItem.studentId) {
+        createNotification(
+          selectedItem.studentId,
+          `Your submission "${selectedItem.title}" has been published to the Public Library by ${user.email}!`
+        );
+      }
+
+      // Update local state
+      setItems((prev) =>
+        prev.map((i) =>
+          i.id === selectedItem.id
+            ? { ...i, isPublished: true, isPublic: true }
+            : i
+        )
+      );
+      setSelectedItem((prev) => ({
+        ...prev,
+        isPublished: true,
+        isPublic: true,
+      }));
+    } catch (err) {
+      console.error("Error publishing to library:", err);
+    } finally {
+      setPublishing(false);
     }
   };
 
@@ -291,6 +341,24 @@ export default function TeacherLibrary() {
                     <strong>Legacy Review Note:</strong> {selectedItem.teacherNote}
                   </div>
                 )}
+
+                {/* ── PUBLISH TO PUBLIC LIBRARY (Teacher Gatekeeper) ── */}
+                <div className="sl-publish-section">
+                  {selectedItem.isPublished ? (
+                    <div className="sl-published-badge">
+                      ✅ Published to Public Library
+                    </div>
+                  ) : (
+                    <button
+                      className="sl-publish-btn"
+                      onClick={handlePublish}
+                      disabled={publishing}
+                      title="Make this submission visible on the Public Library"
+                    >
+                      {publishing ? "Publishing..." : "📢 Publish to Public Library"}
+                    </button>
+                  )}
+                </div>
 
                 {/* Feedback thread */}
                 <div className="sl-feedback-section">

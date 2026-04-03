@@ -10,7 +10,19 @@ import "./Sidebar.css";
  * Dynamically shows/hides tabs based on user role.
  * Public visitors: NO sidebar links.
  * Admin: NO messaging (platform-wide admin).
+ * All logged-in roles get a "Public Library" link.
  */
+
+/** Map role to its home dashboard path */
+const roleDashboardPath = {
+  student: "/student",
+  teacher: "/teacher",
+  principal: "/principal",
+  chairman: "/community",
+  member: "/member",
+  admin: "/admin",
+};
+
 const navLinks = {
   student: [
     { label: "Dashboard", path: "/student", icon: "\u{1F3E0}", tooltip: "View your student dashboard" },
@@ -19,31 +31,37 @@ const navLinks = {
     { label: "Library", path: "/student/library", icon: "\u{1F4D6}", tooltip: "Browse your school's contribution library" },
     { label: "Messages", path: "/student/messages", icon: "\u{2709}\uFE0F", tooltip: "Message your school teachers and classmates" },
     { label: "My Profile", path: "/student/profile", icon: "\u{1F464}", tooltip: "View and edit your profile" },
+    { label: "Public Library", path: "/student/public-library", icon: "\u{1F30D}", tooltip: "Browse the public species library and showcase" },
   ],
   teacher: [
     { label: "Dashboard", path: "/teacher", icon: "\u{1F3E0}", tooltip: "View your teacher dashboard" },
     { label: "Sighting Reports", path: "/teacher/sightings", icon: "\u{1F50D}", tooltip: "Review student sighting reports" },
     { label: "School Library", path: "/teacher/library", icon: "\u{1F4D6}", tooltip: "Review student submissions from your school" },
     { label: "Messages", path: "/teacher/messages", icon: "\u{2709}\uFE0F", tooltip: "Message students and principal at your school" },
+    { label: "Public Library", path: "/teacher/public-library", icon: "\u{1F30D}", tooltip: "Browse the public species library and showcase" },
   ],
   principal: [
     { label: "Dashboard", path: "/principal", icon: "\u{1F3E0}", tooltip: "Manage your school overview" },
     { label: "School Library", path: "/principal/library", icon: "\u{1F4D6}", tooltip: "View all student contributions at your school" },
     { label: "Messages", path: "/principal/messages", icon: "\u{2709}\uFE0F", tooltip: "Message teachers at your school" },
+    { label: "Public Library", path: "/principal/public-library", icon: "\u{1F30D}", tooltip: "Browse the public species library and showcase" },
   ],
   chairman: [
     { label: "Dashboard", path: "/community", icon: "\u{1F3E0}", tooltip: "Manage your community organization" },
     { label: "Community Library", path: "/community/library", icon: "\u{1F4D6}", tooltip: "View all member contributions" },
     { label: "Messages", path: "/community/messages", icon: "\u{2709}\uFE0F", tooltip: "Message community members" },
+    { label: "Public Library", path: "/community/public-library", icon: "\u{1F30D}", tooltip: "Browse the public species library and showcase" },
   ],
   member: [
     { label: "Dashboard", path: "/member", icon: "\u{1F3E0}", tooltip: "View your member dashboard" },
     { label: "My Contributions", path: "/member/sightings", icon: "\u{1F4DD}", tooltip: "Submit articles and sighting reports" },
     { label: "My Profile", path: "/member/profile", icon: "\u{1F464}", tooltip: "View and edit your public profile" },
     { label: "Messages", path: "/member/messages", icon: "\u{2709}\uFE0F", tooltip: "Message community members" },
+    { label: "Public Library", path: "/member/public-library", icon: "\u{1F30D}", tooltip: "Browse the public species library and showcase" },
   ],
   admin: [
     { label: "Dashboard", path: "/admin", icon: "\u{1F3E0}", tooltip: "Platform-wide admin dashboard" },
+    { label: "Public Library", path: "/admin/public-library", icon: "\u{1F30D}", tooltip: "Browse the public species library and showcase" },
   ],
 };
 
@@ -53,6 +71,7 @@ export default function Sidebar() {
   const { user, role } = useAuth();
 
   const links = navLinks[role] || [];
+  const homePath = roleDashboardPath[role] || "/";
 
   const handleLogout = async () => {
     try {
@@ -65,7 +84,12 @@ export default function Sidebar() {
 
   return (
     <div className="sidebar">
-      <div className="sidebar-header">
+      <div
+        className="sidebar-header"
+        onClick={() => navigate(homePath)}
+        style={{ cursor: "pointer" }}
+        title="Go to Dashboard"
+      >
         <div className="sidebar-logo">K</div>
         <span className="sidebar-title">Komodo Hub</span>
       </div>

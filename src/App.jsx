@@ -113,6 +113,17 @@ export default function App() {
           }
         />
 
+        <Route
+          path="/student/public-library"
+          element={
+            <ProtectedRoute allowedRoles={["student"]}>
+              <DashboardLayout title="Public Library">
+                <PublicLibrary />
+              </DashboardLayout>
+            </ProtectedRoute>
+          }
+        />
+
         {/* ── Teacher Routes ── */}
         <Route
           path="/teacher"
@@ -158,6 +169,17 @@ export default function App() {
           }
         />
 
+        <Route
+          path="/teacher/public-library"
+          element={
+            <ProtectedRoute allowedRoles={["teacher"]}>
+              <DashboardLayout title="Public Library">
+                <PublicLibrary />
+              </DashboardLayout>
+            </ProtectedRoute>
+          }
+        />
+
         {/* ── Principal Routes ── */}
         <Route
           path="/principal"
@@ -187,6 +209,17 @@ export default function App() {
             <ProtectedRoute allowedRoles={["principal"]}>
               <DashboardLayout title="Messages">
                 <Messages />
+              </DashboardLayout>
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/principal/public-library"
+          element={
+            <ProtectedRoute allowedRoles={["principal"]}>
+              <DashboardLayout title="Public Library">
+                <PublicLibrary />
               </DashboardLayout>
             </ProtectedRoute>
           }
@@ -239,6 +272,17 @@ export default function App() {
           }
         />
 
+        <Route
+          path="/community/public-library"
+          element={
+            <ProtectedRoute allowedRoles={["chairman"]}>
+              <DashboardLayout title="Public Library">
+                <PublicLibrary />
+              </DashboardLayout>
+            </ProtectedRoute>
+          }
+        />
+
         {/* Member Dashboard */}
         <Route
           path="/member"
@@ -284,19 +328,40 @@ export default function App() {
           }
         />
 
+        <Route
+          path="/member/public-library"
+          element={
+            <ProtectedRoute allowedRoles={["member"]}>
+              <DashboardLayout title="Public Library">
+                <PublicLibrary />
+              </DashboardLayout>
+            </ProtectedRoute>
+          }
+        />
+
         {/* Public Member Profile — no auth required */}
         <Route
           path="/member/profile/:id"
           element={<MemberProfile />}
         />
 
-        {/* ── Admin ── */}
         <Route
           path="/admin"
           element={
             <ProtectedRoute allowedRoles={["admin"]}>
               <DashboardLayout title="Admin Dashboard">
                 <AdminDashboard />
+              </DashboardLayout>
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/admin/public-library"
+          element={
+            <ProtectedRoute allowedRoles={["admin"]}>
+              <DashboardLayout title="Public Library">
+                <PublicLibrary />
               </DashboardLayout>
             </ProtectedRoute>
           }

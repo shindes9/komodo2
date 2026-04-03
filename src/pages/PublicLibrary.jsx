@@ -125,11 +125,12 @@ export default function PublicLibrary() {
   const navigate = useNavigate();
 
   // useAuth may be null for public visitors — safe optional access
-  let authCtx = { user: null, role: null };
+  let authCtx = { user: null, role: null, schoolId: null, orgId: null };
   try { authCtx = useAuth() || authCtx; } catch { /* public visitor */ }
-  const { user, role } = authCtx;
+  const { user, role, schoolId: userSchoolId, orgId: userOrgId } = authCtx;
 
   const isStudent = role === "student";
+  const isLoggedIn = !!user;
 
   /* ── Tab state ── */
   const [activeTab, setActiveTab] = useState("species");
@@ -191,7 +192,12 @@ export default function PublicLibrary() {
 
   const loadShowcase = async () => {
     try {
-      const contribSnap = await getDocs(collection(db, "contributions"));
+      // Only load PUBLISHED contributions (teacher-gated)
+      const publicQ = query(
+        collection(db, "contributions"),
+        where("isPublic", "==", true)
+      );
+      const contribSnap = await getDocs(publicQ);
       const schoolCache = {};
       const orgCache = {};
       const items = [];
@@ -234,15 +240,20 @@ export default function PublicLibrary() {
         }
 
         /* ╔══════════════════════════════════════════════════════════╗
-           ║  SCHOOL PRIVACY FILTER (CRITICAL):                     ║
-           ║  For school entries: STRICTLY OMIT student names,      ║
-           ║  student emails, student profile links.                 ║
-           ║  Only show: content, description, school name, type.   ║
-           ║                                                         ║
-           ║  COMMUNITY TRANSPARENCY:                                ║
-           ║  For community entries: DISPLAY contributor name        ║
-           ║  and clickable public profile link.                     ║
+           ║  PRIVACY FILTER (CRITICAL):                             ║
+           ║                                                          ║
+           ║  PUBLIC / CROSS-SCHOOL VISITORS:                         ║
+           ║    School entries: OMIT student names/emails/profiles.   ║
+           ║    Show only: content, school name, type, date.          ║
+           ║                                                          ║
+           ║  LOGGED-IN SAME-SCHOOL USERS:                            ║
+           ║    Can see full contributor details (student email).      ║
+           ║                                                          ║
+           ║  COMMUNITY:                                              ║
+           ║    Always show contributor name + public profile link.    ║
            ╚══════════════════════════════════════════════════════════╝ */
+        const isSameSchool = isLoggedIn && userSchoolId && data.schoolId === userSchoolId;
+
         const item = {
           id: d.id,
           title: data.title || `${data.species || "Unknown"} Sighting`,
@@ -252,15 +263,18 @@ export default function PublicLibrary() {
           photoURL: data.photoURL || "",
           orgType,
           orgName,
-          status: data.status || "pending",
+          status: data.status || "approved",
         };
 
         if (orgType === "community") {
-          // Community: show contributor info + link to public profile
+          // Community: always show contributor info + link to public profile
           item.contributorName = data.contributorName || data.studentEmail || "Community Member";
           item.contributorProfileLink = data.studentId ? `/member/profile/${data.studentId}` : null;
+        } else if (isSameSchool) {
+          // Same-school logged-in user: show student email
+          item.contributorName = data.studentEmail || "Student";
         }
-        // School: NO student PII is attached — item has no contributorName or profile
+        // Public / cross-school: NO student PII is attached
 
         items.push(item);
       }
@@ -394,9 +408,28 @@ export default function PublicLibrary() {
           </div>
           <div className="pl-header-right">
             {user ? (
-              <span className="pl-user-badge" title={`Logged in as ${role}`}>
-                {role === "student" ? "🎓" : "👤"} {role}
-              </span>
+              <>
+                <button
+                  className="pl-login-btn"
+                  onClick={() => {
+                    const dashPaths = {
+                      student: "/student",
+                      teacher: "/teacher",
+                      principal: "/principal",
+                      chairman: "/community",
+                      member: "/member",
+                      admin: "/admin",
+                    };
+                    navigate(dashPaths[role] || "/");
+                  }}
+                  title="Return to your dashboard"
+                >
+                  ← Dashboard
+                </button>
+                <span className="pl-user-badge" title={`Logged in as ${role}`}>
+                  {role === "student" ? "🎓" : "👤"} {role}
+                </span>
+              </>
             ) : (
               <button className="pl-login-btn" onClick={() => navigate("/")}>
                 Login / Register
@@ -663,11 +696,16 @@ export default function PublicLibrary() {
                       <p className="showcase-card-desc">{item.description}</p>
 
                       <div className="showcase-card-footer">
-                        {/* SCHOOL: Show school name, NO student info */}
+                        {/* SCHOOL: Show school name, optionally student if same-school */}
                         {item.orgType === "school" && (
-                          <span className="showcase-org-name" title="Student identity protected">
-                            🏫 {item.orgName}
-                          </span>
+                          <div className="showcase-org-name" title={item.contributorName ? "" : "Student identity protected"}>
+                            <span>🏫 {item.orgName}</span>
+                            {item.contributorName && (
+                              <span className="showcase-contributor-name" style={{ marginLeft: "8px", fontSize: "12px", color: "#666" }}>
+                                — {item.contributorName}
+                              </span>
+                            )}
+                          </div>
                         )}
 
                         {/* COMMUNITY: Show contributor name + profile */}

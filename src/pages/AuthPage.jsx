@@ -45,6 +45,10 @@ export default function AuthPage() {
   /* ── Community Registration fields ── */
   const [communityOrgName, setCommunityOrgName] = useState("");
 
+  /* ── Principal Registration fields ── */
+  const [principalSchoolName, setPrincipalSchoolName] = useState("");
+  const [principalSchoolDesc, setPrincipalSchoolDesc] = useState("");
+
   const rememberedEmailKey = "komodoHub.rememberedEmail";
 
   /* Access code required for: student, teacher, member */
@@ -179,6 +183,11 @@ export default function AuthPage() {
 
     if (mode === "register" && orgType === "chairman" && !communityOrgName.trim()) {
       showMessage("Organization name is required for chairman registration.", "error");
+      valid = false;
+    }
+
+    if (mode === "register" && orgType === "principal" && !principalSchoolName.trim()) {
+      showMessage("School name is required for principal registration.", "error");
       valid = false;
     }
 
@@ -338,6 +347,29 @@ export default function AuthPage() {
         setConfirmPassword("");
         if (routeByType(cleanRole)) return;
         showMessage("Registered as Chairman successfully!", "success");
+        setLoading(false);
+        return;
+      }
+
+      /* ── Principal path: ATOMIC school creation at registration ── */
+      if (cleanRole === "principal") {
+        // 1. Create the school document first
+        const schoolRef = await addDoc(collection(db, "schools"), {
+          schoolName: principalSchoolName.trim(),
+          description: principalSchoolDesc.trim(),
+          principalId: credential.user.uid,
+          createdAt: serverTimestamp(),
+        });
+
+        // 2. Bind schoolId to user document
+        userData.schoolId = schoolRef.id;
+        await setDoc(doc(db, "users", credential.user.uid), userData);
+
+        persistRememberedEmail(cleanEmail);
+        setPassword("");
+        setConfirmPassword("");
+        if (routeByType(cleanRole)) return;
+        showMessage("Registered as Principal successfully! Your school is ready.", "success");
         setLoading(false);
         return;
       }
@@ -605,6 +637,32 @@ export default function AuthPage() {
             <p className="auth-org-name-hint">
               This will be the public name of your community organization.
             </p>
+          </div>
+        )}
+
+        {/* ── Principal: School Name + Description Fields ── */}
+        {mode === "register" && orgType === "principal" && (
+          <div className="auth-org-name-group">
+            <label className="auth-select-label">School Name *</label>
+            <input
+              className="auth-input"
+              type="text"
+              placeholder="Enter your school name"
+              value={principalSchoolName}
+              onChange={(e) => setPrincipalSchoolName(e.target.value)}
+            />
+            <p className="auth-org-name-hint">
+              This will be the official name of your school on the platform.
+            </p>
+            <label className="auth-select-label" style={{ marginTop: "10px" }}>School Description (optional)</label>
+            <textarea
+              className="auth-input"
+              placeholder="Briefly describe your school and conservation programs"
+              value={principalSchoolDesc}
+              onChange={(e) => setPrincipalSchoolDesc(e.target.value)}
+              rows={3}
+              style={{ resize: "vertical", minHeight: "60px" }}
+            />
           </div>
         )}
 
