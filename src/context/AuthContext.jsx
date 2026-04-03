@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useState } from "react";
-import { onAuthStateChanged } from "firebase/auth";
+import { onAuthStateChanged, signOut } from "firebase/auth";
 import { doc, collection, query, where, getDocs, onSnapshot } from "firebase/firestore";
 import { auth, db } from "../firebase";
 
@@ -44,12 +44,35 @@ export function AuthProvider({ children }) {
       // 2. Automatically pick up schoolId updates (e.g. principal sets up school)
       const userRef = doc(db, "users", firebaseUser.uid);
 
+      // Safety timeout: if the Firestore doc never appears (orphaned auth account),
+      // sign the user out after 5 seconds to avoid an infinite loading spinner.
+      let orphanTimer = null;
+
       userDocUnsub = onSnapshot(
         userRef,
         async (userSnap) => {
           if (!userSnap.exists()) {
-            // Document is being created (registration race) — keep loading spinner active
+            // Document is being created (registration race) — start orphan safety timer
+            if (!orphanTimer) {
+              orphanTimer = setTimeout(async () => {
+                console.warn("AuthContext: user doc not found after 5s — signing out orphaned auth account.");
+                try { await signOut(auth); } catch (_) { /* ignore */ }
+                setUser(null);
+                setUserData(null);
+                setRole(null);
+                setSchoolId(null);
+                setOrgId(null);
+                setClassIds([]);
+                setLoading(false);
+              }, 5000);
+            }
             return;
+          }
+
+          // Doc found — cancel the orphan timer if it was set
+          if (orphanTimer) {
+            clearTimeout(orphanTimer);
+            orphanTimer = null;
           }
 
           const data = userSnap.data();
@@ -95,6 +118,7 @@ export function AuthProvider({ children }) {
         },
         (error) => {
           console.error("User document listener error:", error);
+          if (orphanTimer) { clearTimeout(orphanTimer); orphanTimer = null; }
           setUserData(null);
           setRole(null);
           setSchoolId(null);
@@ -112,7 +136,18 @@ export function AuthProvider({ children }) {
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user, userData, role, schoolId, orgId, classIds, loading }}>
+    <AuthContext.Provider value={{
+      user,
+      userData,
+      role,
+      schoolId,
+      orgId,
+      classIds,
+      loading,
+      // Convenience shortcut: displayName resolves to Firestore displayName,
+      // falls back to Firebase Auth displayName, then email prefix.
+      displayName: userData?.displayName || user?.displayName || user?.email?.split("@")[0] || null,
+    }}>
       {children}
     </AuthContext.Provider>
   );

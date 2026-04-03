@@ -4,6 +4,7 @@ import { auth, db } from "../firebase";
 import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
+  signOut,
   deleteUser,
   updateProfile,
 } from "firebase/auth";
@@ -408,28 +409,54 @@ export default function AuthPage() {
     if (!validateForm()) return;
     setLoading(true);
 
+    let credential = null;
+
     try {
       const cleanEmail = normalizeEmail(email);
-      const credential = await signInWithEmailAndPassword(auth, cleanEmail, password);
+      const selectedRole = String(orgType).trim().toLowerCase();
+
+      // ── Step 1: Authenticate credentials ──
+      credential = await signInWithEmailAndPassword(auth, cleanEmail, password);
 
       persistRememberedEmail(cleanEmail);
 
+      // ── Step 2: Fetch DB profile ──
       const userRef = doc(db, "users", credential.user.uid);
       const userSnap = await getDoc(userRef);
 
-      let role = String(orgType).trim().toLowerCase();
+      // ── Step 3: ROLE GUARD — compare DB role vs UI-selected role ──
+      // If the user's actual role doesn't match what they selected, deny access immediately.
+      if (userSnap.exists()) {
+        const dbRole = (userSnap.data().role || "").trim().toLowerCase();
+        if (dbRole && dbRole !== selectedRole) {
+          // Sign out immediately to prevent partial-auth state
+          await signOut(auth);
+          showMessage(
+            `Unauthorized: Your account does not have ${selectedRole} privileges. You are registered as a ${dbRole}.`,
+            "error"
+          );
+          setLoading(false);
+          return;
+        }
+      }
+
+      // ── Step 4: Resolve role & orgIds from DB ──
+      let role = selectedRole;
       let userSchoolId = null;
 
       if (userSnap.exists()) {
         const userData = userSnap.data();
+        // Use the DB role (already confirmed to match selectedRole above)
         role = userData.role || role;
         userSchoolId = userData.schoolId || null;
       }
 
+      // ── Step 5: Access Code Validation (school roles) ──
       if (needsSchoolAccessCode) {
         const { valid, schoolId } = await validateSchoolAccessCode();
         if (!valid) { setLoading(false); return; }
 
+        // Block if the code belongs to a different school than the one registered
         if (userSchoolId && schoolId && userSchoolId !== schoolId) {
           setAccessCodeError("This access code does not match your registered school.");
           showMessage("Access code does not match your school.", "error");
@@ -437,11 +464,13 @@ export default function AuthPage() {
           return;
         }
 
+        // Assign schoolId if profile is missing it (legacy user migration)
         if (!userSchoolId && schoolId && userSnap.exists()) {
           await updateDoc(userRef, { schoolId });
         }
       }
 
+      // ── Step 6: Community Invite Code Validation (member role) ──
       if (needsCommunityInviteCode) {
         const { valid, orgId } = await validateCommunityInviteCode();
         if (!valid) { setLoading(false); return; }
@@ -452,12 +481,18 @@ export default function AuthPage() {
         }
       }
 
+      // ── Step 7: Route to correct dashboard ──
       setPassword("");
       setConfirmPassword("");
 
       if (routeByType(role)) return;
       showMessage("Logged in successfully.", "success");
     } catch (err) {
+      // If the error occurred after sign-in but before role check completes,
+      // make sure user is not left in a partial auth state.
+      if (credential?.user) {
+        try { await signOut(auth); } catch (_) { /* ignore */ }
+      }
       const friendlyMessage = mapFirebaseError(err, "login");
       showMessage(friendlyMessage, "error");
     } finally {

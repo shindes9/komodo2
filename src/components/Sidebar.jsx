@@ -77,7 +77,7 @@ const navLinks = {
 export default function Sidebar() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { user, userData, role } = useAuth();
+  const { user, displayName, role } = useAuth();
 
   const [totalContributions, setTotalContributions] = useState(0);
   const [reviewedCount, setReviewedCount] = useState(0);
@@ -163,7 +163,7 @@ export default function Sidebar() {
       <div className="sidebar-footer">
         <div className="sidebar-user-info">
           <span className="sidebar-role-badge">{role}</span>
-          <div className="sidebar-user-email">{userData?.displayName || user?.email}</div>
+          <div className="sidebar-user-email">{displayName || user?.email}</div>
         </div>
         <button className="sidebar-logout-btn" onClick={handleLogout}>
           Logout
