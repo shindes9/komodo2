@@ -8,57 +8,70 @@ import {
   getDocs,
   addDoc,
   doc,
-  getDoc,
   updateDoc,
   serverTimestamp,
+  onSnapshot,
 } from "firebase/firestore";
 import "./PrincipalDashboard.css";
 
+// The 3 defined conservation programs in Komodo Hub
+const PROGRAMS = [
+  { key: "komodo_dragon", label: "Komodo Dragon Conservation" },
+  { key: "sumatran_tiger", label: "Sumatran Tiger Watch" },
+  { key: "javan_rhino", label: "Javan Rhino Protection" },
+];
+
 export default function PrincipalDashboard() {
   const { user, userData, schoolId: authSchoolId } = useAuth();
-  const [teachers, setTeachers] = useState([]);
-  const [loadingTeachers, setLoadingTeachers] = useState(true);
 
+  // ── School profile ──────────────────────────────────────────────
+  const [schoolId, setSchoolId] = useState(authSchoolId || null);
   const [schoolName, setSchoolName] = useState("");
   const [schoolDesc, setSchoolDesc] = useState("");
   const [schoolLocation, setSchoolLocation] = useState("");
-  const [schoolId, setSchoolId] = useState(null);
   const [loadingSchool, setLoadingSchool] = useState(true);
   const [savingSchool, setSavingSchool] = useState(false);
   const [schoolMessage, setSchoolMessage] = useState("");
 
+  // ── Access codes ────────────────────────────────────────────────
   const [accessCode, setAccessCode] = useState("");
   const [generatingCode, setGeneratingCode] = useState(false);
   const [allCodes, setAllCodes] = useState([]);
 
-  const [libraryItems, setLibraryItems] = useState([]);
-  const [loadingLibrary, setLoadingLibrary] = useState(true);
-
+  // ── Real-time analytics ─────────────────────────────────────────
+  const [teachers, setTeachers] = useState([]);
   const [studentCount, setStudentCount] = useState(0);
-  const [sightingCount, setSightingCount] = useState(0);
+  const [submissionCount, setSubmissionCount] = useState(0);
+  const [libraryItems, setLibraryItems] = useState([]);
+  const [programStats, setProgramStats] = useState(
+    PROGRAMS.map((p) => ({ ...p, students: [], count: 0 }))
+  );
+  const [loadingStats, setLoadingStats] = useState(true);
+
+  // ── Drill-down modal ────────────────────────────────────────────
+  const [drillProgram, setDrillProgram] = useState(null); // null or program key
+  const [drillStudents, setDrillStudents] = useState([]);
 
   const today = new Date().toLocaleDateString("en-GB", {
-    weekday: "long",
-    year: "numeric",
-    month: "long",
-    day: "numeric",
+    weekday: "long", year: "numeric", month: "long", day: "numeric",
   });
 
+  // ────────────────────────────────────────────────────────────────
+  // Step 1: Load school profile — prefer authSchoolId from context
+  // to skip the extra schools query and prevent the "refresh bug".
+  // ────────────────────────────────────────────────────────────────
   useEffect(() => {
     if (!user) return;
 
-    const fetchSchool = async () => {
+    // If context already gave us a schoolId, still fetch school name/desc
+    const fetchSchoolByPrincipal = async () => {
       try {
-        const q = query(
-          collection(db, "schools"),
-          where("principalId", "==", user.uid)
-        );
-        const snapshot = await getDocs(q);
-
-        if (snapshot.docs.length > 0) {
-          const schoolDoc = snapshot.docs[0];
-          const data = schoolDoc.data();
-          setSchoolId(schoolDoc.id);
+        const q = query(collection(db, "schools"), where("principalId", "==", user.uid));
+        const snap = await getDocs(q);
+        if (!snap.empty) {
+          const d = snap.docs[0];
+          const data = d.data();
+          setSchoolId(d.id);
           setSchoolName(data.schoolName || "");
           setSchoolDesc(data.description || "");
           setSchoolLocation(data.location || "");
@@ -70,79 +83,38 @@ export default function PrincipalDashboard() {
       }
     };
 
-    fetchSchool();
+    fetchSchoolByPrincipal();
   }, [user]);
 
+  // Keep schoolId in sync with authSchoolId if context resolves it first
   useEffect(() => {
-    if (!user || !schoolId) return;
+    if (authSchoolId && !schoolId) setSchoolId(authSchoolId);
+  }, [authSchoolId]);
 
-    const fetchSchoolUsers = async () => {
-      try {
-        const q = query(
-          collection(db, "users"),
-          where("schoolId", "==", schoolId)
-        );
-        const snapshot = await getDocs(q);
-        const data = snapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-        }));
-        setTeachers(data.filter(u => u.role === "teacher"));
-        setStudentCount(data.filter(u => u.role === "student").length);
-      } catch (err) {
-        console.error("Error fetching school users:", err);
-      } finally {
-        setLoadingTeachers(false);
-      }
-    };
+  // ────────────────────────────────────────────────────────────────
+  // Step 2: Real-time listeners (only fire once schoolId is known)
+  // ────────────────────────────────────────────────────────────────
+  useEffect(() => {
+    if (!schoolId) return;
 
-    const fetchAccessCodes = async () => {
-      try {
-        const q = query(
-          collection(db, "accessCodes"),
-          where("createdBy", "==", user.uid)
-        );
-        const snapshot = await getDocs(q);
-        const codes = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
-        codes.sort((a, b) => {
-          const aTime = a.createdAt?.toDate?.() || new Date(0);
-          const bTime = b.createdAt?.toDate?.() || new Date(0);
-          return bTime - aTime;
-        });
-        setAllCodes(codes);
+    const unsubs = [];
 
-        const activeCode = codes.find((c) => c.active);
-        if (activeCode) {
-          setAccessCode(activeCode.code || "");
-        }
-      } catch (err) {
-        console.error("Error fetching access codes:", err);
-      }
-    };
+    // ── 2a. Users (teachers + students count) ───────────────────
+    const usersQ = query(collection(db, "users"), where("schoolId", "==", schoolId));
+    unsubs.push(
+      onSnapshot(usersQ, (snap) => {
+        const all = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+        setTeachers(all.filter((u) => u.role === "teacher"));
+        setStudentCount(all.filter((u) => u.role === "student").length);
+      }, (err) => console.error("Users snapshot error:", err))
+    );
 
-    const fetchCounts = async () => {
-      try {
-        const sightingsSnap = await getDocs(
-          query(
-            collection(db, "contributions"),
-            where("schoolId", "==", schoolId)
-          )
-        );
-        setSightingCount(sightingsSnap.size);
-      } catch (err) {
-        console.error("Error fetching counts:", err);
-      }
-    };
-
-    const fetchLibrary = async () => {
-      try {
-        const contribSnap = await getDocs(
-          query(
-            collection(db, "contributions"),
-            where("schoolId", "==", schoolId)
-          )
-        );
-        const items = contribSnap.docs.map((d) => {
+    // ── 2b. Contributions (submissions count + library) ─────────
+    const contribQ = query(collection(db, "contributions"), where("schoolId", "==", schoolId));
+    unsubs.push(
+      onSnapshot(contribQ, (snap) => {
+        setSubmissionCount(snap.size);
+        const items = snap.docs.map((d) => {
           const data = d.data();
           return {
             id: d.id,
@@ -154,27 +126,83 @@ export default function PrincipalDashboard() {
           };
         });
         setLibraryItems(items);
-      } catch (err) {
-        console.error("Error fetching library:", err);
-      } finally {
-        setLoadingLibrary(false);
-      }
-    };
+      }, (err) => console.error("Contributions snapshot error:", err))
+    );
 
-    fetchSchoolUsers();
-    fetchAccessCodes();
-    fetchCounts();
-    fetchLibrary();
-  }, [user, schoolId]);
+    // ── 2c. Enrollments by program (real numbers) ───────────────
+    const enrollQ = query(collection(db, "enrollments"), where("schoolId", "==", schoolId));
+    unsubs.push(
+      onSnapshot(enrollQ, async (snap) => {
+        const allEnrollments = snap.docs.map((d) => d.data());
 
+        // Build per-program student lists with displayName lookup
+        // Collect all unique studentIds across programs
+        const studentIds = [...new Set(allEnrollments.map((e) => e.userId || e.studentId).filter(Boolean))];
+
+        // Fetch user names for IDs we have
+        const nameMap = {};
+        if (studentIds.length > 0) {
+          // Firestore "in" query max 30 at a time
+          const chunks = [];
+          for (let i = 0; i < studentIds.length; i += 30) chunks.push(studentIds.slice(i, i + 30));
+          for (const chunk of chunks) {
+            try {
+              const usQ = query(collection(db, "users"), where("__name__", "in", chunk));
+              const usSnap = await getDocs(usQ);
+              usSnap.docs.forEach((d) => {
+                const ud = d.data();
+                nameMap[d.id] = ud.displayName || ud.email || d.id;
+              });
+            } catch { /* skip */ }
+          }
+        }
+
+        const updated = PROGRAMS.map((prog) => {
+          const enrolled = allEnrollments.filter(
+            (e) => e.programId === prog.key || e.program === prog.key
+          );
+          const students = enrolled.map((e) => {
+            const uid = e.userId || e.studentId;
+            return { uid, name: nameMap[uid] || uid || "Student" };
+          });
+          return { ...prog, students, count: students.length };
+        });
+        setProgramStats(updated);
+        setLoadingStats(false);
+      }, (err) => {
+        console.error("Enrollments snapshot error:", err);
+        setLoadingStats(false);
+      })
+    );
+
+    // ── 2d. Access codes ─────────────────────────────────────────
+    const codesQ = query(collection(db, "accessCodes"), where("createdBy", "==", user.uid));
+    unsubs.push(
+      onSnapshot(codesQ, (snap) => {
+        const codes = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+        codes.sort((a, b) => {
+          const at = a.createdAt?.toDate?.() || new Date(0);
+          const bt = b.createdAt?.toDate?.() || new Date(0);
+          return bt - at;
+        });
+        setAllCodes(codes);
+        const active = codes.find((c) => c.active);
+        setAccessCode(active?.code || "");
+      }, (err) => console.error("Access codes snapshot error:", err))
+    );
+
+    return () => unsubs.forEach((u) => u());
+  }, [schoolId, user?.uid]);
+
+  // ────────────────────────────────────────────────────────────────
+  // Actions
+  // ────────────────────────────────────────────────────────────────
   const handleSaveSchool = async () => {
     if (!schoolName.trim()) return;
     setSavingSchool(true);
     setSchoolMessage("");
-
     try {
       if (schoolId) {
-        // Update existing school document
         await updateDoc(doc(db, "schools", schoolId), {
           schoolName: schoolName.trim(),
           description: schoolDesc.trim(),
@@ -182,92 +210,44 @@ export default function PrincipalDashboard() {
         });
         setSchoolMessage("School profile saved successfully!");
       } else {
-        // Before creating, verify no school already exists for this principal
-        // (guards against duplicate creation if local state was somehow reset)
-        const existingQ = query(
-          collection(db, "schools"),
-          where("principalId", "==", user.uid)
-        );
+        const existingQ = query(collection(db, "schools"), where("principalId", "==", user.uid));
         const existingSnap = await getDocs(existingQ);
-
         if (!existingSnap.empty) {
-          // School already exists — just link it and update
           const existingDoc = existingSnap.docs[0];
           const existingId = existingDoc.id;
           setSchoolId(existingId);
           await updateDoc(doc(db, "schools", existingId), {
-            schoolName: schoolName.trim(),
-            description: schoolDesc.trim(),
-            location: schoolLocation.trim(),
+            schoolName: schoolName.trim(), description: schoolDesc.trim(), location: schoolLocation.trim(),
           });
           await updateDoc(doc(db, "users", user.uid), { schoolId: existingId });
           setSchoolMessage("School profile saved successfully!");
           return;
         }
-
-        // Truly no school yet — create one
-        let newSchoolId;
-        try {
-          const docRef = await addDoc(collection(db, "schools"), {
-            schoolName: schoolName.trim(),
-            description: schoolDesc.trim(),
-            location: schoolLocation.trim(),
-            principalId: user.uid,
-            createdAt: serverTimestamp(),
-          });
-          newSchoolId = docRef.id;
-          setSchoolId(newSchoolId);
-        } catch (schoolErr) {
-          console.error("Error creating school document:", schoolErr);
-          setSchoolMessage(`Failed to create school: ${schoolErr.message}`);
-          return;
-        }
-
-        try {
-          await updateDoc(doc(db, "users", user.uid), { schoolId: newSchoolId });
-          setSchoolMessage("School profile saved successfully!");
-        } catch (userUpdateErr) {
-          console.error("Error linking school to user:", userUpdateErr);
-          setSchoolMessage(`School created but failed to link to your profile: ${userUpdateErr.message}`);
-        }
+        const docRef = await addDoc(collection(db, "schools"), {
+          schoolName: schoolName.trim(), description: schoolDesc.trim(),
+          location: schoolLocation.trim(), principalId: user.uid, createdAt: serverTimestamp(),
+        });
+        setSchoolId(docRef.id);
+        await updateDoc(doc(db, "users", user.uid), { schoolId: docRef.id });
+        setSchoolMessage("School created and profile saved!");
       }
     } catch (err) {
-      console.error("Error saving school:", err);
       setSchoolMessage(`Failed to save: ${err.message}`);
     } finally {
-      // Always reset — do NOT wrap in `if (savingSchool)` because savingSchool
-      // is captured as the stale closure value (false) from before setSavingSchool(true).
       setSavingSchool(false);
     }
   };
 
   const generateAccessCode = async () => {
-    if (!schoolId) {
-      setSchoolMessage("Please save a school profile first before generating access codes.");
-      return;
-    }
-
+    if (!schoolId) { setSchoolMessage("Save a school profile first."); return; }
     setGeneratingCode(true);
     try {
       const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
       let code = "";
-      for (let i = 0; i < 6; i++) {
-        code += chars.charAt(Math.floor(Math.random() * chars.length));
-      }
-
-      const docRef = await addDoc(collection(db, "accessCodes"), {
-        code: code,
-        schoolId: schoolId,
-        createdBy: user.uid,
-        createdAt: serverTimestamp(),
-        active: true,
+      for (let i = 0; i < 6; i++) code += chars.charAt(Math.floor(Math.random() * chars.length));
+      await addDoc(collection(db, "accessCodes"), {
+        code, schoolId, createdBy: user.uid, createdAt: serverTimestamp(), active: true,
       });
-
-      setAccessCode(code);
-      setAllCodes((prev) => [
-        { id: docRef.id, code, schoolId, createdBy: user.uid, active: true, createdAt: { toDate: () => new Date() } },
-        ...prev,
-      ]);
     } catch (err) {
       console.error("Error generating code:", err);
     } finally {
@@ -278,16 +258,6 @@ export default function PrincipalDashboard() {
   const deactivateCode = async (codeId) => {
     try {
       await updateDoc(doc(db, "accessCodes", codeId), { active: false });
-      setAllCodes((prev) =>
-        prev.map((c) => (c.id === codeId ? { ...c, active: false } : c))
-      );
-
-      const stillActive = allCodes.find((c) => c.id !== codeId && c.active);
-      if (stillActive) {
-        setAccessCode(stillActive.code);
-      } else {
-        setAccessCode("");
-      }
     } catch (err) {
       console.error("Error deactivating code:", err);
     }
@@ -296,36 +266,33 @@ export default function PrincipalDashboard() {
   const toggleLibraryVisibility = async (id) => {
     const item = libraryItems.find((i) => i.id === id);
     if (!item) return;
-
     try {
-      await updateDoc(doc(db, "contributions", id), {
-        isPublic: !item.isPublic,
-      });
-      setLibraryItems((prev) =>
-        prev.map((i) =>
-          i.id === id ? { ...i, isPublic: !i.isPublic } : i
-        )
-      );
+      await updateDoc(doc(db, "contributions", id), { isPublic: !item.isPublic });
     } catch (err) {
       console.error("Error toggling visibility:", err);
     }
   };
 
-  const enrollmentData = [
-    { label: "Komodo Dragon Conservation", value: 45 },
-    { label: "Sumatran Tiger Watch", value: 32 },
-    { label: "Javan Rhino Protection", value: 18 },
-  ];
+  const openDrillDown = (programKey) => {
+    const prog = programStats.find((p) => p.key === programKey);
+    setDrillProgram(prog);
+    setDrillStudents(prog?.students || []);
+  };
 
-  const maxEnrollment = Math.max(...enrollmentData.map((d) => d.value));
+  const maxEnrollment = Math.max(1, ...programStats.map((p) => p.count));
 
+  // ────────────────────────────────────────────────────────────────
+  // Render
+  // ────────────────────────────────────────────────────────────────
   return (
     <div className="principal-dashboard">
+      {/* Welcome */}
       <div className="principal-welcome">
         <h2>Welcome back, {userData?.displayName || user?.email}</h2>
         <p className="principal-date">{today}</p>
       </div>
 
+      {/* ── Stats Bar (real-time) ── */}
       <div className="principal-stats">
         <div className="principal-stat-card">
           <div className="stat-icon">👨‍🏫</div>
@@ -335,127 +302,80 @@ export default function PrincipalDashboard() {
         <div className="principal-stat-card">
           <div className="stat-icon">👥</div>
           <div className="stat-number">{studentCount}</div>
-          <div className="stat-label">School Students</div>
+          <div className="stat-label">Students</div>
         </div>
         <div className="principal-stat-card">
           <div className="stat-icon">📚</div>
-          <div className="stat-number">3</div>
+          <div className="stat-number">{PROGRAMS.length}</div>
           <div className="stat-label">Active Programs</div>
         </div>
         <div className="principal-stat-card">
           <div className="stat-icon">🔍</div>
-          <div className="stat-number">{sightingCount}</div>
-          <div className="stat-label">School Submissions</div>
+          <div className="stat-number">{submissionCount}</div>
+          <div className="stat-label">Total Submissions</div>
         </div>
       </div>
 
+      {/* ── School Profile ── */}
       <div className="principal-section">
         <h3>School Profile</h3>
-
         {loadingSchool ? (
           <p className="loading-text">Loading school profile...</p>
         ) : (
           <div className="school-profile-form">
             <div className="form-row">
               <label className="form-label">School Name *</label>
-              <input
-                className="form-input"
-                type="text"
-                placeholder="Enter school name"
-                value={schoolName}
-                onChange={(e) => setSchoolName(e.target.value)}
-              />
+              <input className="form-input" type="text" placeholder="Enter school name"
+                value={schoolName} onChange={(e) => setSchoolName(e.target.value)} />
               {!schoolName.trim() && <span className="form-validation-hint">School name is required</span>}
             </div>
-
             <div className="form-row">
               <label className="form-label">Description</label>
-              <textarea
-                className="form-textarea"
-                placeholder="Brief description of the school"
-                value={schoolDesc}
-                onChange={(e) => setSchoolDesc(e.target.value)}
-              />
+              <textarea className="form-textarea" placeholder="Brief description of the school"
+                value={schoolDesc} onChange={(e) => setSchoolDesc(e.target.value)} />
             </div>
-
             <div className="form-row">
               <label className="form-label">Location</label>
-              <input
-                className="form-input"
-                type="text"
-                placeholder="e.g. Labuan Bajo, Flores"
-                value={schoolLocation}
-                onChange={(e) => setSchoolLocation(e.target.value)}
-              />
+              <input className="form-input" type="text" placeholder="e.g. Labuan Bajo, Flores"
+                value={schoolLocation} onChange={(e) => setSchoolLocation(e.target.value)} />
             </div>
-
-            {schoolMessage && (
-              <p className="school-save-message">{schoolMessage}</p>
-            )}
-
-            <button
-              className="save-school-btn"
-              onClick={handleSaveSchool}
-              disabled={savingSchool || !schoolName.trim()}
-            >
+            {schoolMessage && <p className="school-save-message">{schoolMessage}</p>}
+            <button className="save-school-btn" onClick={handleSaveSchool}
+              disabled={savingSchool || !schoolName.trim()}>
               {savingSchool ? "Saving..." : "Save Profile"}
             </button>
           </div>
         )}
 
+        {/* Access Codes */}
         <div className="access-code-section">
           <h4>Student & Teacher Access Code</h4>
-          <p className="access-code-desc">
-            Students and teachers use this code to join your school on the platform.
-          </p>
+          <p className="access-code-desc">Students and teachers use this code to join your school.</p>
           <div className="access-code-display">
-            {accessCode ? (
-              <span className="access-code-value">{accessCode}</span>
-            ) : (
-              <span className="access-code-empty">No code generated yet</span>
-            )}
-            <button
-              className="generate-code-btn"
-              onClick={generateAccessCode}
+            {accessCode
+              ? <span className="access-code-value">{accessCode}</span>
+              : <span className="access-code-empty">No code generated yet</span>}
+            <button className="generate-code-btn" onClick={generateAccessCode}
               disabled={generatingCode || !schoolId}
-              title="Generate a 6-character code for students and teachers to join your school"
-            >
+              title="Generate a 6-character join code">
               {generatingCode ? "Generating..." : "Generate New Code"}
             </button>
           </div>
-          {!schoolId && (
-            <p className="form-validation-hint">Save a school profile first to generate access codes.</p>
-          )}
+          {!schoolId && <p className="form-validation-hint">Save a school profile first to generate access codes.</p>}
 
           {allCodes.length > 0 && (
             <div className="codes-history">
               <h4>Code History</h4>
               <div className="codes-table">
                 <div className="codes-table-header">
-                  <span>Code</span>
-                  <span>Created</span>
-                  <span>Status</span>
-                  <span>Action</span>
+                  <span>Code</span><span>Created</span><span>Status</span><span>Action</span>
                 </div>
                 {allCodes.map((c) => (
                   <div key={c.id} className="codes-table-row">
                     <span className="code-value-small">{c.code}</span>
                     <span>{c.createdAt?.toDate ? c.createdAt.toDate().toLocaleDateString() : "—"}</span>
-                    <span>
-                      <span className={`code-status ${c.active ? "code-active" : "code-inactive"}`}>
-                        {c.active ? "Active" : "Inactive"}
-                      </span>
-                    </span>
-                    <span>
-                      {c.active && (
-                        <button
-                          className="deactivate-btn"
-                          onClick={() => deactivateCode(c.id)}
-                        >
-                          Deactivate
-                        </button>
-                      )}
-                    </span>
+                    <span><span className={`code-status ${c.active ? "code-active" : "code-inactive"}`}>{c.active ? "Active" : "Inactive"}</span></span>
+                    <span>{c.active && <button className="deactivate-btn" onClick={() => deactivateCode(c.id)}>Deactivate</button>}</span>
                   </div>
                 ))}
               </div>
@@ -464,23 +384,17 @@ export default function PrincipalDashboard() {
         </div>
       </div>
 
+      {/* ── Teachers Table ── */}
       <div className="principal-section">
         <h3>School Teachers</h3>
-
-        {loadingTeachers ? (
-          <p className="loading-text">Loading teachers...</p>
-        ) : teachers.length === 0 ? (
-          <div className="empty-state">
-            <p>No teachers registered at your school yet. Share the access code with your teachers.</p>
-          </div>
+        {teachers.length === 0 ? (
+          <div className="empty-state"><p>No teachers registered yet. Share the access code with your teachers.</p></div>
         ) : (
           <div className="teachers-table">
-            <div className="teachers-header">
-              <span>Email</span>
-              <span>Joined</span>
-            </div>
+            <div className="teachers-header"><span>Name</span><span>Email</span><span>Joined</span></div>
             {teachers.map((teacher) => (
               <div key={teacher.id} className="teachers-row">
+                <span>{teacher.displayName || "—"}</span>
                 <span>{teacher.email}</span>
                 <span>{teacher.createdAt?.toDate ? teacher.createdAt.toDate().toLocaleDateString() : "—"}</span>
               </div>
@@ -489,26 +403,49 @@ export default function PrincipalDashboard() {
         )}
       </div>
 
+      {/* ── Program Enrollment Analytics (Real Data) ── */}
       <div className="principal-section">
-        <h3>School Library (Student Submissions)</h3>
+        <h3>📊 Program Enrollment Analytics</h3>
         <p className="section-desc">
-          Student contributions from your school. Toggle visibility to control public access.
+          Live enrollment counts derived from your school's <code>enrollments</code> collection.
+          Click a program row to see enrolled students.
         </p>
 
-        {loadingLibrary ? (
-          <p className="loading-text">Loading submissions...</p>
-        ) : libraryItems.length === 0 ? (
-          <div className="empty-state">
-            <p>No student submissions yet.</p>
+        {loadingStats ? (
+          <p className="loading-text">Loading enrollment data...</p>
+        ) : (
+          <div className="bar-chart">
+            {programStats.map((prog) => (
+              <div key={prog.key} className="bar-row"
+                onClick={() => openDrillDown(prog.key)}
+                style={{ cursor: "pointer" }}
+                title={`Click to see ${prog.count} enrolled student(s)`}
+              >
+                <span className="bar-label">{prog.label}</span>
+                <div className="bar-track">
+                  <div className="bar-fill"
+                    style={{ width: prog.count === 0 ? "4px" : `${(prog.count / maxEnrollment) * 100}%` }} />
+                </div>
+                <span className="bar-value"
+                  style={{ color: prog.count === 0 ? "#999" : "#2E7D32", fontWeight: prog.count > 0 ? 700 : 400 }}>
+                  {prog.count}
+                </span>
+              </div>
+            ))}
           </div>
+        )}
+      </div>
+
+      {/* ── Library / Submissions ── */}
+      <div className="principal-section">
+        <h3>School Library (Student Submissions)</h3>
+        <p className="section-desc">Toggle visibility to control public access.</p>
+        {libraryItems.length === 0 ? (
+          <div className="empty-state"><p>No student submissions yet.</p></div>
         ) : (
           <div className="library-table">
             <div className="library-header">
-              <span>Title</span>
-              <span>Author</span>
-              <span>Type</span>
-              <span>Status</span>
-              <span>Visibility</span>
+              <span>Title</span><span>Author</span><span>Type</span><span>Status</span><span>Visibility</span>
             </div>
             {libraryItems.map((item) => (
               <div key={item.id} className="library-row">
@@ -517,10 +454,8 @@ export default function PrincipalDashboard() {
                 <span>{item.type}</span>
                 <span className={`submission-status-badge ${item.status}`}>{item.status}</span>
                 <span>
-                  <button
-                    className={`visibility-toggle ${item.isPublic ? "public" : "private"}`}
-                    onClick={() => toggleLibraryVisibility(item.id)}
-                  >
+                  <button className={`visibility-toggle ${item.isPublic ? "public" : "private"}`}
+                    onClick={() => toggleLibraryVisibility(item.id)}>
                     {item.isPublic ? "Public" : "Private"}
                   </button>
                 </span>
@@ -530,49 +465,59 @@ export default function PrincipalDashboard() {
         )}
       </div>
 
+      {/* ── Quick Summary ── */}
       <div className="principal-section">
-        <h3>Reports</h3>
-
-        <div className="report-subsection">
-          <h4>Program Enrollment</h4>
-          <div className="bar-chart">
-            {enrollmentData.map((item) => (
-              <div key={item.label} className="bar-row">
-                <span className="bar-label">{item.label}</span>
-                <div className="bar-track">
-                  <div
-                    className="bar-fill"
-                    style={{ width: `${(item.value / maxEnrollment) * 100}%` }}
-                  ></div>
-                </div>
-                <span className="bar-value">{item.value}</span>
-              </div>
-            ))}
+        <h3>Quick Summary</h3>
+        <div className="summary-grid">
+          <div className="summary-item">
+            <span className="summary-number">{submissionCount}</span>
+            <span className="summary-label">Total Submissions</span>
           </div>
-        </div>
-
-        <div className="report-subsection">
-          <h4>Quick Summary</h4>
-          <div className="summary-grid">
-            <div className="summary-item">
-              <span className="summary-number">{sightingCount}</span>
-              <span className="summary-label">School Submissions This Term</span>
-            </div>
-            <div className="summary-item">
-              <span className="summary-number">{studentCount}</span>
-              <span className="summary-label">Registered Students</span>
-            </div>
-            <div className="summary-item">
-              <span className="summary-number">{teachers.length}</span>
-              <span className="summary-label">Active Teachers</span>
-            </div>
-            <div className="summary-item">
-              <span className="summary-number">3</span>
-              <span className="summary-label">Active Programs</span>
-            </div>
+          <div className="summary-item">
+            <span className="summary-number">{studentCount}</span>
+            <span className="summary-label">Registered Students</span>
+          </div>
+          <div className="summary-item">
+            <span className="summary-number">{teachers.length}</span>
+            <span className="summary-label">Active Teachers</span>
+          </div>
+          <div className="summary-item">
+            <span className="summary-number">{programStats.reduce((s, p) => s + p.count, 0)}</span>
+            <span className="summary-label">Total Enrollments</span>
           </div>
         </div>
       </div>
+
+      {/* ── Drill-Down Modal ── */}
+      {drillProgram && (
+        <div className="ps-modal-overlay" onClick={() => setDrillProgram(null)}>
+          <div className="ps-modal" onClick={(e) => e.stopPropagation()}
+            style={{ maxWidth: "480px" }}>
+            <div className="ps-modal-header">
+              <h3>{drillProgram.label}</h3>
+              <button className="ps-modal-close" onClick={() => setDrillProgram(null)}>&times;</button>
+            </div>
+            <p style={{ color: "#666", marginBottom: "16px", fontSize: "14px" }}>
+              {drillStudents.length} student(s) enrolled in this program at your school.
+            </p>
+            {drillStudents.length === 0 ? (
+              <p style={{ color: "#999" }}>No students enrolled yet.</p>
+            ) : (
+              <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
+                {drillStudents.map((s, i) => (
+                  <li key={s.uid || i} style={{
+                    padding: "10px 12px", borderBottom: "1px solid #f0f0f0",
+                    display: "flex", alignItems: "center", gap: "10px"
+                  }}>
+                    <span style={{ fontSize: "20px" }}>🎓</span>
+                    <span style={{ fontWeight: 600, color: "#222" }}>{s.name}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
