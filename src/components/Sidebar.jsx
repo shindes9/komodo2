@@ -1,0 +1,98 @@
+import { useNavigate, useLocation } from "react-router-dom";
+import { signOut } from "firebase/auth";
+import { auth } from "../firebase";
+import { useAuth } from "../context/AuthContext";
+import "./Sidebar.css";
+
+/**
+ * Sidebar Navigation — RBAC-aware
+ * 
+ * Dynamically shows/hides tabs based on user role.
+ * Public visitors: NO sidebar links.
+ * Admin: NO messaging (platform-wide admin).
+ */
+const navLinks = {
+  student: [
+    { label: "Dashboard", path: "/student", icon: "\u{1F3E0}", tooltip: "View your student dashboard" },
+    { label: "My Programs", path: "/student/enrol", icon: "\u{1F4DA}", tooltip: "Browse and enrol in conservation programs" },
+    { label: "My Work", path: "/student/sightings", icon: "\u{1F4DD}", tooltip: "Submit and view your conservation work" },
+    { label: "Library", path: "/student/library", icon: "\u{1F4D6}", tooltip: "Browse your school's contribution library" },
+    { label: "Messages", path: "/student/messages", icon: "\u{2709}\uFE0F", tooltip: "Message your school teachers and classmates" },
+    { label: "My Profile", path: "/student/profile", icon: "\u{1F464}", tooltip: "View and edit your profile" },
+  ],
+  teacher: [
+    { label: "Dashboard", path: "/teacher", icon: "\u{1F3E0}", tooltip: "View your teacher dashboard" },
+    { label: "Sighting Reports", path: "/teacher/sightings", icon: "\u{1F50D}", tooltip: "Review student sighting reports" },
+    { label: "School Library", path: "/teacher/library", icon: "\u{1F4D6}", tooltip: "Review student submissions from your school" },
+    { label: "Messages", path: "/teacher/messages", icon: "\u{2709}\uFE0F", tooltip: "Message students and principal at your school" },
+  ],
+  principal: [
+    { label: "Dashboard", path: "/principal", icon: "\u{1F3E0}", tooltip: "Manage your school overview" },
+    { label: "School Library", path: "/principal/library", icon: "\u{1F4D6}", tooltip: "View all student contributions at your school" },
+    { label: "Messages", path: "/principal/messages", icon: "\u{2709}\uFE0F", tooltip: "Message teachers at your school" },
+  ],
+  chairman: [
+    { label: "Dashboard", path: "/community", icon: "\u{1F3E0}", tooltip: "Manage your community organization" },
+    { label: "Community Library", path: "/community/library", icon: "\u{1F4D6}", tooltip: "View all member contributions" },
+    { label: "Messages", path: "/community/messages", icon: "\u{2709}\uFE0F", tooltip: "Message community members" },
+  ],
+  member: [
+    { label: "Dashboard", path: "/member", icon: "\u{1F3E0}", tooltip: "View your member dashboard" },
+    { label: "My Contributions", path: "/member/sightings", icon: "\u{1F4DD}", tooltip: "Submit articles and sighting reports" },
+    { label: "My Profile", path: "/member/profile", icon: "\u{1F464}", tooltip: "View and edit your public profile" },
+    { label: "Messages", path: "/member/messages", icon: "\u{2709}\uFE0F", tooltip: "Message community members" },
+  ],
+  admin: [
+    { label: "Dashboard", path: "/admin", icon: "\u{1F3E0}", tooltip: "Platform-wide admin dashboard" },
+  ],
+};
+
+export default function Sidebar() {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const { user, role } = useAuth();
+
+  const links = navLinks[role] || [];
+
+  const handleLogout = async () => {
+    try {
+      await signOut(auth);
+      navigate("/", { replace: true });
+    } catch (err) {
+      console.error("Logout failed:", err);
+    }
+  };
+
+  return (
+    <div className="sidebar">
+      <div className="sidebar-header">
+        <div className="sidebar-logo">K</div>
+        <span className="sidebar-title">Komodo Hub</span>
+      </div>
+
+      <nav className="sidebar-nav">
+        {links.map((link) => (
+          <button
+            key={link.path}
+            className={`sidebar-link ${location.pathname === link.path ? "sidebar-link-active" : ""}`}
+            onClick={() => navigate(link.path)}
+            title={link.tooltip}
+          >
+            <span className="sidebar-link-icon">{link.icon}</span>
+            <span>{link.label}</span>
+          </button>
+        ))}
+      </nav>
+
+      <div className="sidebar-footer">
+        <div className="sidebar-user-info">
+          <span className="sidebar-role-badge">{role}</span>
+          <div className="sidebar-user-email">{user?.email}</div>
+        </div>
+        <button className="sidebar-logout-btn" onClick={handleLogout}>
+          Logout
+        </button>
+      </div>
+    </div>
+  );
+}

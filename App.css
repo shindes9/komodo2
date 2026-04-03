@@ -1,0 +1,39 @@
+/* Full screen center container */
+.app-container {
+  height: 100vh;
+  width: 100vw;
+
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+/* Card styling */
+.auth-card {
+  width: 400px;
+  padding: 25px;
+
+  background: white;
+  border-radius: 14px;
+
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+}
+
+/* Buttons */
+.primary-btn {
+  width: 100%;
+  padding: 12px;
+
+  background: #2e7d32;
+  color: white;
+
+  border: none;
+  border-radius: 8px;
+
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.primary-btn:hover {
+  background: #256628;
+}
