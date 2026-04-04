@@ -120,6 +120,7 @@ export default function SightingReport() {
         schoolId: schoolId || null,
         orgId: userData?.orgId || null,
         organizationType: userData?.orgId ? "community" : (schoolId ? "school" : "none"),
+        isVisibleInCommunity: false,
         title: reportTitle,
         type: contributionType,
         species: contributionType === "Sighting Report" ? species : "",

@@ -34,8 +34,6 @@ export default function CommunityLibrary() {
   const [orgName, setOrgName] = useState("");
   const [publishing, setPublishing] = useState(false);
 
-  const isChairman = role === "chairman";
-
   useEffect(() => {
     if (!user || !orgId) return;
     fetchItems();
@@ -53,10 +51,11 @@ export default function CommunityLibrary() {
         // ignore
       }
 
-      // Fetch all contributions for this community org
+      // Fetch all published contributions for this community org
       const orgQ = query(
         collection(db, "contributions"),
-        where("orgId", "==", orgId)
+        where("orgId", "==", orgId),
+        where("isVisibleInCommunity", "==", true)
       );
       const orgSnap = await getDocs(orgQ);
 
@@ -90,87 +89,7 @@ export default function CommunityLibrary() {
     }
   };
 
-  /**
-   * Chairman Gatekeeper: Publish a contribution to the Public Library.
-   */
-  const handlePublish = async () => {
-    if (!selectedItem) return;
-    setPublishing(true);
 
-    try {
-      await updateDoc(doc(db, "contributions", selectedItem.id), {
-        isPublished: true,
-        isPublic: true,
-        isVisibleInPublic: true,
-        status: "published",
-        publishedAt: serverTimestamp(),
-        publishedBy: user.uid,
-        publishedByEmail: userData?.displayName || user.email,
-      });
-
-      if (selectedItem.contributorId) {
-        createNotification(
-          selectedItem.contributorId,
-          `Your contribution "${selectedItem.title}" has been published to the Public Library!`,
-          null,
-          { orgId: orgId, type: "published" }
-        );
-      }
-
-      setItems((prev) =>
-        prev.map((i) =>
-          i.id === selectedItem.id
-            ? { ...i, isPublished: true, isPublic: true, status: "published" }
-            : i
-        )
-      );
-      setSelectedItem((prev) => ({
-        ...prev,
-        isPublished: true,
-        isPublic: true,
-        status: "published",
-      }));
-    } catch (err) {
-      console.error("Error publishing:", err);
-    } finally {
-      setPublishing(false);
-    }
-  };
-
-  /**
-   * Archive: Revert published contribution back to internal-only.
-   */
-  const handleArchive = async () => {
-    if (!selectedItem) return;
-    setPublishing(true);
-
-    try {
-      await updateDoc(doc(db, "contributions", selectedItem.id), {
-        isPublished: false,
-        isPublic: false,
-        isVisibleInPublic: false,
-        status: "internal",
-      });
-
-      setItems((prev) =>
-        prev.map((i) =>
-          i.id === selectedItem.id
-            ? { ...i, isPublished: false, isPublic: false, status: "internal" }
-            : i
-        )
-      );
-      setSelectedItem((prev) => ({
-        ...prev,
-        isPublished: false,
-        isPublic: false,
-        status: "internal",
-      }));
-    } catch (err) {
-      console.error("Error archiving:", err);
-    } finally {
-      setPublishing(false);
-    }
-  };
 
   const typeOptions = useMemo(() => {
     return [...new Set(items.map((i) => i.type))];
@@ -280,44 +199,7 @@ export default function CommunityLibrary() {
 
                 <div className="sl-reader-body">{selectedItem.description}</div>
 
-                {/* ── PUBLISH / ARCHIVE (Chairman Gatekeeper) ── */}
-                {isChairman && (
-                  <div className="sl-publish-section">
-                    {selectedItem.isPublished ? (
-                      <div style={{ display: "flex", gap: "10px", alignItems: "center", flexWrap: "wrap" }}>
-                        <div className="sl-published-badge">
-                          ✅ Published to Public Library
-                        </div>
-                        <button
-                          onClick={handleArchive}
-                          disabled={publishing}
-                          title="Remove from Public Library and keep internal only"
-                          style={{
-                            padding: "8px 14px",
-                            background: "#fff3e0",
-                            color: "#e65100",
-                            border: "1px solid #ffcc80",
-                            borderRadius: "8px",
-                            fontSize: "13px",
-                            fontWeight: 600,
-                            cursor: "pointer",
-                          }}
-                        >
-                          {publishing ? "Archiving..." : "🔒 Archive (Internal Only)"}
-                        </button>
-                      </div>
-                    ) : (
-                      <button
-                        className="sl-publish-btn"
-                        onClick={handlePublish}
-                        disabled={publishing}
-                        title="Make this contribution visible on the Public Library"
-                      >
-                        {publishing ? "Publishing..." : "📢 Publish to Public Library"}
-                      </button>
-                    )}
-                  </div>
-                )}
+
 
                 {/* Feedback thread */}
                 {selectedItem.feedback && selectedItem.feedback.length > 0 && (

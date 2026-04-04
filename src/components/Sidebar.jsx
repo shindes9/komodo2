@@ -52,7 +52,7 @@ const navLinks = {
   ],
   chairman: [
     { label: "Dashboard", path: "/community", icon: "\u{1F3E0}", tooltip: "Manage your community organization" },
-    { label: "Community Library", path: "/community/library", icon: "\u{1F4D6}", tooltip: "View all member contributions" },
+    { label: "Review Dashboard", path: "/community/library", icon: "\u{1F50D}", tooltip: "Review member contributions" },
     { label: "Messages", path: "/community/messages", icon: "\u{2709}\uFE0F", tooltip: "Message community members" },
     { label: "Settings", path: "/settings", icon: "\u{2699}\uFE0F", tooltip: "Profile settings" },
     { label: "Public Library", path: "/community/public-library", icon: "\u{1F30D}", tooltip: "Browse the public species library and showcase" },

@@ -85,7 +85,7 @@ export default function MyCanvas() {
         {contributions.map((c) => {
           let actionText = `${c.type || "Sighting Report"} Submitted`;
           if (c.status === "reviewed") actionText = `${c.type || "Sighting Report"} Reviewed`;
-          if (c.isVisibleInSchool || c.isVisibleInPublic) {
+          if (c.isVisibleInSchool || c.isVisibleInCommunity || c.isVisibleInPublic) {
             actionText = `${c.type || "Sighting Report"} Published!`;
           }
 
@@ -143,7 +143,7 @@ export default function MyCanvas() {
         </div>
         <div className="canvas-stat">
           <span className="canvas-stat-num">
-            {contributions.filter((c) => c.isVisibleInSchool || c.isVisibleInPublic).length}
+            {contributions.filter((c) => c.isVisibleInSchool || c.isVisibleInCommunity || c.isVisibleInPublic).length}
           </span>
           <span className="canvas-stat-label">Published Works</span>
         </div>
