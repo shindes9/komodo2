@@ -126,7 +126,7 @@ export default function PrincipalDashboard() {
             author: data.studentName || data.studentEmail || "Anonymous",
             type: data.type || "Sighting Report",
             status: data.status || "pending",
-            isPublic: data.isPublic || false,
+            isVisibleInPublic: data.isVisibleInPublic || false,
           };
         });
         setLibraryItems(items);
@@ -278,7 +278,7 @@ export default function PrincipalDashboard() {
     const item = libraryItems.find((i) => i.id === id);
     if (!item) return;
     try {
-      await updateDoc(doc(db, "contributions", id), { isPublic: !item.isPublic });
+      await updateDoc(doc(db, "contributions", id), { isVisibleInPublic: !item.isVisibleInPublic });
     } catch (err) {
       console.error("Error toggling visibility:", err);
     }
@@ -465,9 +465,9 @@ export default function PrincipalDashboard() {
                 <span>{item.type}</span>
                 <span className={`submission-status-badge ${item.status}`}>{item.status}</span>
                 <span>
-                  <button className={`visibility-toggle ${item.isPublic ? "public" : "private"}`}
+                  <button className={`visibility-toggle ${item.isVisibleInPublic ? "public" : "private"}`}
                     onClick={() => toggleLibraryVisibility(item.id)}>
-                    {item.isPublic ? "Public" : "Private"}
+                    {item.isVisibleInPublic ? "Public" : "Private"}
                   </button>
                 </span>
               </div>

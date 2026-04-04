@@ -318,16 +318,18 @@ export default function MyCanvas() {
               border: `1px solid ${selectedSubmission.status === "pending" ? "#E0E0E0" : "#C8E6C9"}`
             }}>
               <h3 style={{ margin: "0 0 12px 0", color: selectedSubmission.status === "pending" ? "#666" : "#2E7D32", fontSize: "16px", display: "flex", alignItems: "center", gap: "8px" }}>
-                {selectedSubmission.status === "pending" ? "⏳ Teacher Feedback" : "✔️ Teacher Feedback"}
+                {selectedSubmission.status === "pending" 
+                  ? (userData?.role === "member" ? "⏳ Chairman Feedback" : "⏳ Teacher Feedback") 
+                  : (userData?.role === "member" ? "✔️ Chairman Feedback" : "✔️ Teacher Feedback")}
               </h3>
               
               {selectedSubmission.status === "pending" ? (
                 <p style={{ color: "#666", margin: 0, fontStyle: "italic" }}>
-                  Your submission has been received and is currently awaiting review by a teacher. Check back later for feedback!
+                  Your submission has been received and is currently awaiting review by a {userData?.role === "member" ? "chairman" : "teacher"}. Check back later for feedback!
                 </p>
               ) : (
                 <div style={{ color: "#1B5E20", lineHeight: "1.6", whiteSpace: "pre-wrap" }}>
-                  {selectedSubmission.teacherFeedback || selectedSubmission.feedback || "Good job! No specific feedback provided."}
+                  {selectedSubmission.chairmanFeedback || selectedSubmission.teacherFeedback || selectedSubmission.feedback || "Good job! No specific feedback provided."}
                 </div>
               )}
             </div>
