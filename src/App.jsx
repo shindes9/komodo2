@@ -315,11 +315,22 @@ export default function App() {
         />
 
         <Route
-          path="/community/library"
+          path="/community/review"
           element={
             <ProtectedRoute allowedRoles={["chairman"]}>
               <DashboardLayout title="Review Dashboard">
                 <ChairmanLibrary />
+              </DashboardLayout>
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/community/library"
+          element={
+            <ProtectedRoute allowedRoles={["chairman"]}>
+              <DashboardLayout title="Community Library">
+                <CommunityLibrary />
               </DashboardLayout>
             </ProtectedRoute>
           }
