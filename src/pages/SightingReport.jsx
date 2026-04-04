@@ -22,11 +22,22 @@ const speciesOptions = [
   "Other",
 ];
 
-const contributionTypes = [
-  { value: "Sighting Report", label: "🔍 Sighting Report" },
-  { value: "Conservation Effort", label: "🌱 Conservation Effort" },
-  { value: "Field Notes", label: "📋 Field Notes" },
-];
+const getContributionTypes = (role) => {
+  const base = [
+    { value: "Sighting Report", label: "🔍 Sighting Report" },
+    { value: "Conservation Effort", label: "🌱 Conservation Effort" },
+    { value: "Field Notes", label: "📋 Field Notes" },
+  ];
+  if (role === "member" || role === "chairman") {
+    return [
+      { value: "Article", label: "📝 Article" },
+      { value: "Essay", label: "📄 Essay" },
+      { value: "Column", label: "📰 Column" },
+      ...base
+    ];
+  }
+  return base;
+};
 
 export default function SightingReport() {
   const { user, userData, schoolId } = useAuth();
@@ -105,7 +116,10 @@ export default function SightingReport() {
         studentId: user.uid,
         studentEmail: user.email,
         studentName: userData?.displayName || user.email,
+        contributorName: userData?.displayName || user.email,
         schoolId: schoolId || null,
+        orgId: userData?.orgId || null,
+        organizationType: userData?.orgId ? "community" : (schoolId ? "school" : "none"),
         title: reportTitle,
         type: contributionType,
         species: contributionType === "Sighting Report" ? species : "",
@@ -128,7 +142,7 @@ export default function SightingReport() {
 
       // Legacy sightings collection dual-write removed to prevent split logic
 
-      // Notify teachers
+      // Notify teachers OR chairman
       if (schoolId) {
         const teacherQ = query(
           collection(db, "users"),
@@ -139,7 +153,23 @@ export default function SightingReport() {
         teacherSnap.docs.forEach((t) => {
           createNotification(
             t.id, 
-            `New ${contributionType}: ${reportTitle}`
+            `New ${contributionType}: ${reportTitle}`,
+            schoolId
+          );
+        });
+      } else if (userData?.orgId) {
+        const chairmanQ = query(
+          collection(db, "users"),
+          where("role", "==", "chairman"),
+          where("orgId", "==", userData.orgId)
+        );
+        const chairmanSnap = await getDocs(chairmanQ);
+        chairmanSnap.docs.forEach((c) => {
+          createNotification(
+            c.id, 
+            `New ${contributionType} by ${userData?.displayName || user.email}: ${reportTitle}`,
+            null,
+            { orgId: userData.orgId, type: "system" }
           );
         });
       }
@@ -184,7 +214,7 @@ export default function SightingReport() {
 
         {/* Contribution type selector */}
         <div className="contribution-type-selector">
-          {contributionTypes.map((ct) => (
+          {getContributionTypes(userData?.role).map((ct) => (
             <button
               key={ct.value}
               className={`contribution-type-btn ${contributionType === ct.value ? "contribution-type-active" : ""}`}

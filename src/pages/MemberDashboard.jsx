@@ -22,16 +22,7 @@ export default function MemberDashboard() {
   const [contributions, setContributions] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  /* ── Contribution Form State ── */
-  const [showForm, setShowForm] = useState(false);
-  const [formType, setFormType] = useState("Article");
-  const [formTitle, setFormTitle] = useState("");
-  const [formContent, setFormContent] = useState("");
-  const [formSpecies, setFormSpecies] = useState("");
-  const [formLocation, setFormLocation] = useState("");
-  const [formPhotoURL, setFormPhotoURL] = useState("");
-  const [submitting, setSubmitting] = useState(false);
-  const [formMessage, setFormMessage] = useState("");
+
 
   const today = new Date().toLocaleDateString("en-GB", {
     weekday: "long", year: "numeric", month: "long", day: "numeric",
@@ -74,60 +65,6 @@ export default function MemberDashboard() {
     fetchData();
   }, [user, orgId]);
 
-  const handleSubmit = async () => {
-    if (!formTitle.trim() || !formContent.trim()) {
-      setFormMessage("Title and content are required.");
-      return;
-    }
-    setSubmitting(true);
-    setFormMessage("");
-
-    try {
-      const contribution = {
-        title: formTitle.trim(),
-        description: formContent.trim(),
-        type: formType,
-        studentId: user.uid,
-        studentEmail: userData?.displayName || user.email,
-        contributorName: userData?.displayName || "Community Member",
-        orgId: orgId || null,
-        organizationType: "community",
-        status: "submitted",
-        createdAt: serverTimestamp(),
-        date: new Date().toLocaleDateString("en-GB"),
-      };
-
-      if (formType === "Sighting Report") {
-        contribution.species = formSpecies.trim();
-        contribution.location = formLocation.trim();
-      }
-      if (formPhotoURL.trim()) {
-        contribution.photoURL = formPhotoURL.trim();
-      }
-
-      const docRef = await addDoc(collection(db, "contributions"), contribution);
-
-      setContributions((prev) => [
-        { id: docRef.id, ...contribution, createdAt: { toDate: () => new Date() } },
-        ...prev,
-      ]);
-
-      setFormTitle("");
-      setFormContent("");
-      setFormSpecies("");
-      setFormLocation("");
-      setFormPhotoURL("");
-      setShowForm(false);
-      setFormMessage("Contribution submitted successfully!");
-
-      setTimeout(() => setFormMessage(""), 4000);
-    } catch (err) {
-      console.error("Error submitting contribution:", err);
-      setFormMessage(`Failed to submit: ${err.message}`);
-    } finally {
-      setSubmitting(false);
-    }
-  };
 
   const articleCount = contributions.filter(
     (c) => c.type === "Article" || c.type === "Essay" || c.type === "Column"
@@ -167,100 +104,11 @@ export default function MemberDashboard() {
           <h3>📝 Submit Contribution</h3>
           <button
             className="section-action-btn"
-            onClick={() => setShowForm(!showForm)}
+            onClick={() => navigate("/member/sightings")}
           >
-            {showForm ? "Cancel" : "+ New Contribution"}
+            + New Contribution
           </button>
         </div>
-
-        {formMessage && (
-          <p className={`form-feedback ${formMessage.includes("success") ? "form-feedback-success" : "form-feedback-error"}`}>
-            {formMessage}
-          </p>
-        )}
-
-        {showForm && (
-          <div className="contribution-form">
-            <div className="form-row">
-              <label className="form-label">Type *</label>
-              <select
-                className="form-select"
-                value={formType}
-                onChange={(e) => setFormType(e.target.value)}
-              >
-                <option value="Article">Article</option>
-                <option value="Essay">Essay</option>
-                <option value="Column">Column</option>
-                <option value="Sighting Report">Sighting Report</option>
-              </select>
-            </div>
-
-            <div className="form-row">
-              <label className="form-label">Title *</label>
-              <input
-                className="form-input"
-                type="text"
-                placeholder="Enter title"
-                value={formTitle}
-                onChange={(e) => setFormTitle(e.target.value)}
-              />
-            </div>
-
-            <div className="form-row">
-              <label className="form-label">Content / Description *</label>
-              <textarea
-                className="form-textarea-lg"
-                placeholder="Write your article, essay, or sighting description..."
-                value={formContent}
-                onChange={(e) => setFormContent(e.target.value)}
-              />
-            </div>
-
-            {formType === "Sighting Report" && (
-              <>
-                <div className="form-row">
-                  <label className="form-label">Species</label>
-                  <input
-                    className="form-input"
-                    type="text"
-                    placeholder="e.g. Sumatran Tiger"
-                    value={formSpecies}
-                    onChange={(e) => setFormSpecies(e.target.value)}
-                  />
-                </div>
-                <div className="form-row">
-                  <label className="form-label">Location</label>
-                  <input
-                    className="form-input"
-                    type="text"
-                    placeholder="General area (do NOT share exact GPS)"
-                    value={formLocation}
-                    onChange={(e) => setFormLocation(e.target.value)}
-                  />
-                </div>
-              </>
-            )}
-
-            <div className="form-row">
-              <label className="form-label">Photo URL (optional)</label>
-              <input
-                className="form-input"
-                type="text"
-                placeholder="https://example.com/photo.jpg"
-                value={formPhotoURL}
-                onChange={(e) => setFormPhotoURL(e.target.value)}
-              />
-            </div>
-
-            <button
-              className="submit-contribution-btn"
-              onClick={handleSubmit}
-              disabled={submitting}
-            >
-              {submitting ? "Submitting..." : "Submit Contribution"}
-            </button>
-          </div>
-        )}
       </div>
 
       {/* ── My Contributions ── */}
@@ -272,7 +120,7 @@ export default function MemberDashboard() {
         ) : contributions.length === 0 ? (
           <div className="empty-state">
             <p>You haven't submitted any contributions yet.</p>
-            <button className="empty-state-btn" onClick={() => setShowForm(true)}>
+            <button className="empty-state-btn" onClick={() => navigate("/member/sightings")}>
               Submit Your First Contribution
             </button>
           </div>
@@ -298,7 +146,7 @@ export default function MemberDashboard() {
       <div className="member-section">
         <h3>Quick Actions</h3>
         <div className="quick-actions">
-          <button className="quick-action-btn" onClick={() => setShowForm(true)}>
+          <button className="quick-action-btn" onClick={() => navigate("/member/sightings")}>
             📝 New Contribution
           </button>
           <button className="quick-action-btn" onClick={() => navigate("/member/profile")}>

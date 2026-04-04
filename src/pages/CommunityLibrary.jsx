@@ -101,6 +101,7 @@ export default function CommunityLibrary() {
       await updateDoc(doc(db, "contributions", selectedItem.id), {
         isPublished: true,
         isPublic: true,
+        isVisibleInPublic: true,
         status: "published",
         publishedAt: serverTimestamp(),
         publishedBy: user.uid,
@@ -110,7 +111,9 @@ export default function CommunityLibrary() {
       if (selectedItem.contributorId) {
         createNotification(
           selectedItem.contributorId,
-          `Your contribution "${selectedItem.title}" has been published to the Public Library!`
+          `Your contribution "${selectedItem.title}" has been published to the Public Library!`,
+          null,
+          { orgId: orgId, type: "published" }
         );
       }
 
@@ -145,6 +148,7 @@ export default function CommunityLibrary() {
       await updateDoc(doc(db, "contributions", selectedItem.id), {
         isPublished: false,
         isPublic: false,
+        isVisibleInPublic: false,
         status: "internal",
       });
 
