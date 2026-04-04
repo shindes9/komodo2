@@ -1,480 +1,976 @@
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useCallback } from "react";
 import { useAuth } from "../context/AuthContext";
 import { db } from "../firebase";
-import { collection, getDocs, query, where } from "firebase/firestore";
-import { seedAllData } from "../seedData";
+import {
+  collection,
+  getDocs,
+  query,
+  where,
+  doc,
+  deleteDoc,
+  updateDoc,
+  writeBatch,
+} from "firebase/firestore";
 import "./AdminDashboard.css";
 
-/**
- * Admin (Superuser) Dashboard
- * 
- * Global Access: retrieves data from ALL schools and contributions
- * without any schoolId filter. Generates real "Business Analytics"
- * on popular programs, total sightings, contribution breakdowns.
- */
+const PROGRAMS = {
+  komodo_dragon: "Komodo Dragon Conservation",
+  sumatran_tiger: "Sumatran Tiger Watch",
+  javan_rhino: "Javan Rhino Protection",
+};
 
-const placeholderCommunities = [
-  { id: 1, name: "Labuan Bajo Community Watch", location: "Labuan Bajo, Flores", members: 34, status: "Active" },
-  { id: 2, name: "Flores Conservation Network", location: "Ende, Flores", members: 22, status: "Active" },
-  { id: 3, name: "Komodo Island Volunteers", location: "Komodo Island", members: 18, status: "Active" },
-];
-
-export default function AdminDashboard() {
+export default function AdminDashboard({ initialTab }) {
   const { user, userData } = useAuth();
-  const [schools, setSchools] = useState([]);
-  const [users, setUsers] = useState([]);
-  const [classes, setClasses] = useState([]);
-  const [contributions, setContributions] = useState([]);
-  const [loadingSchools, setLoadingSchools] = useState(true);
-  const [loadingUsers, setLoadingUsers] = useState(true);
-  const [loadingClasses, setLoadingClasses] = useState(true);
-  const [loadingContributions, setLoadingContributions] = useState(true);
-  const [sightingCount, setSightingCount] = useState(0);
-  const [enrollments, setEnrollments] = useState([]);
-  const [enrollmentCount, setEnrollmentCount] = useState(0);
-  const [messageCount, setMessageCount] = useState(0);
 
+  // ── Data state ──
+  const [schools, setSchools] = useState([]);
+  const [organizations, setOrganizations] = useState([]);
+  const [users, setUsers] = useState([]);
+  const [contributions, setContributions] = useState([]);
+  const [classes, setClasses] = useState([]);
+  const [enrollments, setEnrollments] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  // ── Navigation ──
+  const [activeTab, setActiveTab] = useState(initialTab || "overview");
+
+  // ── School detail ──
+  const [selectedSchool, setSelectedSchool] = useState(null);
+
+  // ── Community detail ──
+  const [selectedOrg, setSelectedOrg] = useState(null);
+
+  // ── Users tab ──
   const [userSearch, setUserSearch] = useState("");
   const [userRoleFilter, setUserRoleFilter] = useState("all");
+  const [userOrgFilter, setUserOrgFilter] = useState("all");
 
-  const [platformName, setPlatformName] = useState("Komodo Hub");
-  const [contactEmail, setContactEmail] = useState("admin@komodohub.org");
-  const [maintenanceMode, setMaintenanceMode] = useState(false);
+  // ── Public Library tab ──
+  const [showcaseItems, setShowcaseItems] = useState([]);
+  const [loadingShowcase, setLoadingShowcase] = useState(false);
+  const [showcaseSearch, setShowcaseSearch] = useState("");
 
-  const [activeTab, setActiveTab] = useState("schools");
-  const [seeding, setSeeding] = useState(false);
-  const [seedMessage, setSeedMessage] = useState("");
+  // ── Confirm dialogs ──
+  const [confirmAction, setConfirmAction] = useState(null);
 
   const today = new Date().toLocaleDateString("en-GB", {
-    weekday: "long",
-    year: "numeric",
-    month: "long",
-    day: "numeric",
+    weekday: "long", year: "numeric", month: "long", day: "numeric",
   });
 
-  useEffect(() => {
-    const fetchSchools = async () => {
-      try {
-        const snapshot = await getDocs(collection(db, "schools"));
-        const data = snapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-        }));
-        setSchools(data);
-      } catch (err) {
-        console.error("Error fetching schools:", err);
-      } finally {
-        setLoadingSchools(false);
-      }
-    };
+  // ── Fetch all data ──
+  const fetchAllData = useCallback(async () => {
+    setLoading(true);
+    try {
+      const [
+        schoolsSnap,
+        orgsSnap,
+        usersSnap,
+        contribSnap,
+        classesSnap,
+        enrollSnap,
+      ] = await Promise.all([
+        getDocs(collection(db, "schools")),
+        getDocs(collection(db, "organizations")),
+        getDocs(collection(db, "users")),
+        getDocs(collection(db, "contributions")),
+        getDocs(collection(db, "classes")),
+        getDocs(collection(db, "enrollments")),
+      ]);
 
-    const fetchUsers = async () => {
-      try {
-        const snapshot = await getDocs(collection(db, "users"));
-        const data = snapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-        }));
-        setUsers(data);
-      } catch (err) {
-        console.error("Error fetching users:", err);
-      } finally {
-        setLoadingUsers(false);
-      }
-    };
-
-    const fetchClasses = async () => {
-      try {
-        const snapshot = await getDocs(collection(db, "classes"));
-        const data = snapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-        }));
-        setClasses(data);
-      } catch (err) {
-        console.error("Error fetching classes:", err);
-      } finally {
-        setLoadingClasses(false);
-      }
-    };
-
-    const fetchContributions = async () => {
-      try {
-        const snapshot = await getDocs(collection(db, "contributions"));
-        const data = snapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-        }));
-        setContributions(data);
-      } catch (err) {
-        console.error("Error fetching contributions:", err);
-      } finally {
-        setLoadingContributions(false);
-      }
-    };
-
-    const fetchCounts = async () => {
-      try {
-        const sightingsSnap = await getDocs(collection(db, "sightings"));
-        setSightingCount(sightingsSnap.size);
-
-        const enrollmentsSnap = await getDocs(collection(db, "enrollments"));
-        setEnrollmentCount(enrollmentsSnap.size);
-        setEnrollments(enrollmentsSnap.docs.map((d) => ({ id: d.id, ...d.data() })));
-
-        const messagesSnap = await getDocs(collection(db, "messages"));
-        setMessageCount(messagesSnap.size);
-      } catch (err) {
-        console.error("Error fetching counts:", err);
-      }
-    };
-
-    fetchSchools();
-    fetchUsers();
-    fetchClasses();
-    fetchContributions();
-    fetchCounts();
+      setSchools(schoolsSnap.docs.map((d) => ({ id: d.id, ...d.data() })));
+      setOrganizations(orgsSnap.docs.map((d) => ({ id: d.id, ...d.data() })));
+      setUsers(usersSnap.docs.map((d) => ({ id: d.id, ...d.data() })));
+      setContributions(contribSnap.docs.map((d) => ({ id: d.id, ...d.data() })));
+      setClasses(classesSnap.docs.map((d) => ({ id: d.id, ...d.data() })));
+      setEnrollments(enrollSnap.docs.map((d) => ({ id: d.id, ...d.data() })));
+    } catch (err) {
+      console.error("Admin: error fetching data:", err);
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
-  const filteredUsers = users.filter((u) => {
-    const matchesSearch = u.email?.toLowerCase().includes(userSearch.toLowerCase());
-    const matchesRole = userRoleFilter === "all" || u.role === userRoleFilter;
-    return matchesSearch && matchesRole;
-  });
+  useEffect(() => { fetchAllData(); }, [fetchAllData]);
 
-  const roleCounts = {
-    student: users.filter((u) => u.role === "student").length,
-    teacher: users.filter((u) => u.role === "teacher").length,
-    principal: users.filter((u) => u.role === "principal").length,
-    admin: users.filter((u) => u.role === "admin").length,
-  };
+  // Sync tab when navigating via sidebar
+  useEffect(() => {
+    if (initialTab) setActiveTab(initialTab);
+  }, [initialTab]);
 
-  // ── REAL ANALYTICS from Firestore data ──
+  // ── Fetch showcase items (public library contributions) ──
+  const fetchShowcase = useCallback(async () => {
+    setLoadingShowcase(true);
+    try {
+      const q = query(
+        collection(db, "contributions"),
+        where("isVisibleInPublic", "==", true)
+      );
+      const snap = await getDocs(q);
+      setShowcaseItems(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
+    } catch (err) {
+      console.error("Error fetching showcase:", err);
+    } finally {
+      setLoadingShowcase(false);
+    }
+  }, []);
 
-  // Contribution breakdown by type
-  const contributionByType = useMemo(() => {
-    const typeMap = {};
-    contributions.forEach((c) => {
-      const type = c.type || "Sighting Report";
-      typeMap[type] = (typeMap[type] || 0) + 1;
-    });
-    return Object.entries(typeMap).map(([name, count]) => ({ name, count }));
+  useEffect(() => {
+    if (activeTab === "library") fetchShowcase();
+  }, [activeTab, fetchShowcase]);
+
+  // ── Derived counts ──
+  const roleCounts = useMemo(() => {
+    const counts = { student: 0, teacher: 0, principal: 0, chairman: 0, member: 0, admin: 0 };
+    users.forEach((u) => { if (counts[u.role] !== undefined) counts[u.role]++; });
+    return counts;
+  }, [users]);
+
+  const statusBreakdown = useMemo(() => {
+    const s = { pending: 0, reviewed: 0 };
+    contributions.forEach((c) => { s[c.status] = (s[c.status] || 0) + 1; });
+    return s;
   }, [contributions]);
 
-  // Most popular programs (by real enrollment count)
-  const popularPrograms = useMemo(() => {
-    const programMap = {};
+  const contributionsByType = useMemo(() => {
+    const map = {};
+    contributions.forEach((c) => {
+      const t = c.type || "Sighting Report";
+      map[t] = (map[t] || 0) + 1;
+    });
+    return Object.entries(map).sort((a, b) => b[1] - a[1]);
+  }, [contributions]);
+
+  const programEnrollments = useMemo(() => {
+    const map = {};
     enrollments.forEach((e) => {
       const pid = e.programId || "unknown";
-      programMap[pid] = (programMap[pid] || 0) + 1;
+      map[pid] = (map[pid] || 0) + 1;
     });
-
-    const programNames = {
-      komodo_dragon: "Komodo Dragon Conservation",
-      sumatran_tiger: "Sumatran Tiger Watch",
-      javan_rhino: "Javan Rhino Protection",
-    };
-
-    return Object.entries(programMap)
-      .map(([id, count]) => ({ name: programNames[id] || id, enrollments: count }))
-      .sort((a, b) => b.enrollments - a.enrollments);
+    return Object.entries(map).map(([id, count]) => ({
+      name: PROGRAMS[id] || id,
+      count,
+    })).sort((a, b) => b.count - a.count);
   }, [enrollments]);
 
-  // Per-school contribution count
-  const schoolContributions = useMemo(() => {
-    const schoolMap = {};
-    contributions.forEach((c) => {
-      const sid = c.schoolId || "unaffiliated";
-      schoolMap[sid] = (schoolMap[sid] || 0) + 1;
-    });
-
-    return Object.entries(schoolMap).map(([schoolId, count]) => {
-      const school = schools.find((s) => s.id === schoolId);
-      return {
-        schoolId,
-        schoolName: school?.schoolName || schoolId,
-        count,
-      };
-    }).sort((a, b) => b.count - a.count);
-  }, [contributions, schools]);
-
-  // Contribution status breakdown
-  const statusBreakdown = useMemo(() => {
-    const statusMap = { pending: 0, reviewed: 0, approved: 0 };
-    contributions.forEach((c) => {
-      const s = c.status || "pending";
-      statusMap[s] = (statusMap[s] || 0) + 1;
-    });
-    return statusMap;
-  }, [contributions]);
-
-  const maxProgEnrollment = Math.max(...(popularPrograms.length > 0 ? popularPrograms.map((p) => p.enrollments) : [1]));
-  const maxContribType = Math.max(...(contributionByType.length > 0 ? contributionByType.map((c) => c.count) : [1]));
-
-  const getSchoolName = (schoolId) => {
-    const school = schools.find((s) => s.id === schoolId);
-    return school ? school.schoolName : schoolId || "—";
+  // ── Helpers ──
+  const getSchoolName = (schoolId) => schools.find((s) => s.id === schoolId)?.schoolName || "—";
+  const getOrgName = (orgId) => organizations.find((o) => o.id === orgId)?.orgName || "—";
+  const getUserName = (uid) => {
+    const u = users.find((u) => u.id === uid);
+    return u?.displayName || u?.email || uid?.substring(0, 8) || "—";
   };
+
+  const schoolUsers = (schoolId) => users.filter((u) => u.schoolId === schoolId);
+  const schoolContribs = (schoolId) => contributions.filter((c) => c.schoolId === schoolId);
+  const schoolClasses = (schoolId) => classes.filter((c) => c.schoolId === schoolId);
+  const schoolEnrollments = (schoolId) => enrollments.filter((e) => e.schoolId === schoolId);
+
+  const orgUsers = (orgId) => users.filter((u) => u.orgId === orgId);
+  const orgContribs = (orgId) => contributions.filter((c) => c.orgId === orgId);
+
+  // ── Actions ──
+  const handleDeleteSchool = async (school) => {
+    setConfirmAction({
+      title: "Delete School",
+      message: `Are you sure you want to delete "${school.schoolName}"? This will remove the school record. Users linked to this school will lose their school association.`,
+      onConfirm: async () => {
+        try {
+          // Delete the school doc
+          await deleteDoc(doc(db, "schools", school.id));
+
+          // Remove schoolId from all users in that school
+          const batch = writeBatch(db);
+          const affectedUsers = users.filter((u) => u.schoolId === school.id);
+          affectedUsers.forEach((u) => {
+            batch.update(doc(db, "users", u.id), { schoolId: null });
+          });
+
+          // Deactivate access codes for this school
+          const codesSnap = await getDocs(
+            query(collection(db, "accessCodes"), where("schoolId", "==", school.id))
+          );
+          codesSnap.docs.forEach((d) => {
+            batch.update(doc(db, "accessCodes", d.id), { active: false });
+          });
+
+          await batch.commit();
+          await fetchAllData();
+          setSelectedSchool(null);
+          setConfirmAction(null);
+        } catch (err) {
+          console.error("Error deleting school:", err);
+          alert("Failed to delete school. Check console for details.");
+          setConfirmAction(null);
+        }
+      },
+    });
+  };
+
+  const handleDeleteOrg = async (org) => {
+    setConfirmAction({
+      title: "Delete Community",
+      message: `Are you sure you want to delete "${org.orgName}"? This will remove the community record. Members linked to this community will lose their association.`,
+      onConfirm: async () => {
+        try {
+          await deleteDoc(doc(db, "organizations", org.id));
+
+          const batch = writeBatch(db);
+          const affectedUsers = users.filter((u) => u.orgId === org.id);
+          affectedUsers.forEach((u) => {
+            batch.update(doc(db, "users", u.id), { orgId: null });
+          });
+
+          const codesSnap = await getDocs(
+            query(collection(db, "communityInviteCodes"), where("orgId", "==", org.id))
+          );
+          codesSnap.docs.forEach((d) => {
+            batch.update(doc(db, "communityInviteCodes", d.id), { active: false });
+          });
+
+          await batch.commit();
+          await fetchAllData();
+          setSelectedOrg(null);
+          setConfirmAction(null);
+        } catch (err) {
+          console.error("Error deleting community:", err);
+          alert("Failed to delete community. Check console for details.");
+          setConfirmAction(null);
+        }
+      },
+    });
+  };
+
+  const handleRemoveFromShowcase = async (item) => {
+    setConfirmAction({
+      title: "Remove from Public Showcase",
+      message: `Remove "${item.title || "this contribution"}" from the public showcase? It will no longer be visible in the public library.`,
+      onConfirm: async () => {
+        try {
+          await updateDoc(doc(db, "contributions", item.id), {
+            isVisibleInPublic: false,
+            isPublic: false,
+          });
+          setShowcaseItems((prev) => prev.filter((i) => i.id !== item.id));
+          setConfirmAction(null);
+        } catch (err) {
+          console.error("Error removing from showcase:", err);
+          alert("Failed to remove item.");
+          setConfirmAction(null);
+        }
+      },
+    });
+  };
+
+  // ── Filtered users ──
+  const filteredUsers = useMemo(() => {
+    return users.filter((u) => {
+      const matchesSearch =
+        (u.email?.toLowerCase() || "").includes(userSearch.toLowerCase()) ||
+        (u.displayName?.toLowerCase() || "").includes(userSearch.toLowerCase());
+      const matchesRole = userRoleFilter === "all" || u.role === userRoleFilter;
+      let matchesOrg = true;
+      if (userOrgFilter === "school") matchesOrg = !!u.schoolId;
+      else if (userOrgFilter === "community") matchesOrg = !!u.orgId;
+      else if (userOrgFilter === "unaffiliated") matchesOrg = !u.schoolId && !u.orgId;
+      return matchesSearch && matchesRole && matchesOrg;
+    });
+  }, [users, userSearch, userRoleFilter, userOrgFilter]);
+
+  const filteredShowcase = useMemo(() => {
+    if (!showcaseSearch.trim()) return showcaseItems;
+    const q = showcaseSearch.toLowerCase();
+    return showcaseItems.filter(
+      (i) =>
+        (i.title?.toLowerCase() || "").includes(q) ||
+        (i.type?.toLowerCase() || "").includes(q) ||
+        (i.studentName?.toLowerCase() || "").includes(q)
+    );
+  }, [showcaseItems, showcaseSearch]);
+
+  // ── Per-school/org contribution stats ──
+  const schoolContribStats = useMemo(() => {
+    return schools.map((s) => {
+      const contribs = contributions.filter((c) => c.schoolId === s.id);
+      const usrs = users.filter((u) => u.schoolId === s.id);
+      return {
+        ...s,
+        contributionCount: contribs.length,
+        userCount: usrs.length,
+        studentCount: usrs.filter((u) => u.role === "student").length,
+        teacherCount: usrs.filter((u) => u.role === "teacher").length,
+      };
+    });
+  }, [schools, contributions, users]);
+
+  const orgContribStats = useMemo(() => {
+    return organizations.map((o) => {
+      const contribs = contributions.filter((c) => c.orgId === o.id);
+      const usrs = users.filter((u) => u.orgId === o.id);
+      return {
+        ...o,
+        contributionCount: contribs.length,
+        memberCount: usrs.filter((u) => u.role === "member").length,
+      };
+    });
+  }, [organizations, contributions, users]);
+
+  // ── Bar chart max helpers ──
+  const maxProgram = Math.max(...(programEnrollments.length > 0 ? programEnrollments.map((p) => p.count) : [1]));
+  const maxContribType = Math.max(...(contributionsByType.length > 0 ? contributionsByType.map((c) => c[1]) : [1]));
+
+  if (loading) {
+    return (
+      <div className="admin-dashboard">
+        <div className="admin-loading">
+          <div className="admin-spinner"></div>
+          <p>Loading admin dashboard...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="admin-dashboard">
-      <div className="admin-welcome">
-        <h2>Welcome back, {userData?.displayName || user?.email}</h2>
-        <p className="admin-date">{today}</p>
-      </div>
-
-      <div className="admin-stats">
-        <div className="admin-stat-card">
-          <div className="stat-icon">🏫</div>
-          <div className="stat-number">{schools.length}</div>
-          <div className="stat-label">Schools</div>
-        </div>
-        <div className="admin-stat-card">
-          <div className="stat-icon">🌍</div>
-          <div className="stat-number">{placeholderCommunities.length}</div>
-          <div className="stat-label">Communities</div>
-        </div>
-        <div className="admin-stat-card">
-          <div className="stat-icon">👥</div>
-          <div className="stat-number">{users.length}</div>
-          <div className="stat-label">Total Users</div>
-        </div>
-        <div className="admin-stat-card">
-          <div className="stat-icon">📝</div>
-          <div className="stat-number">{contributions.length}</div>
-          <div className="stat-label">Contributions</div>
-        </div>
-        <div className="admin-stat-card">
-          <div className="stat-icon">🔍</div>
-          <div className="stat-number">{sightingCount}</div>
-          <div className="stat-label">Sightings</div>
-        </div>
-        <div className="admin-stat-card">
-          <div className="stat-icon">📚</div>
-          <div className="stat-number">{enrollmentCount}</div>
-          <div className="stat-label">Enrollments</div>
-        </div>
-        <div className="admin-stat-card">
-          <div className="stat-icon">✉️</div>
-          <div className="stat-number">{messageCount}</div>
-          <div className="stat-label">Messages</div>
-        </div>
-        <div className="admin-stat-card">
-          <div className="stat-icon">🏫</div>
-          <div className="stat-number">{classes.length}</div>
-          <div className="stat-label">Classes</div>
-        </div>
-      </div>
-
-      <div className="admin-tabs">
-        <button className={`admin-tab ${activeTab === "schools" ? "active" : ""}`} onClick={() => setActiveTab("schools")}>Schools</button>
-        <button className={`admin-tab ${activeTab === "classes" ? "active" : ""}`} onClick={() => setActiveTab("classes")}>Classes</button>
-        <button className={`admin-tab ${activeTab === "contributions" ? "active" : ""}`} onClick={() => setActiveTab("contributions")}>Contributions</button>
-        <button className={`admin-tab ${activeTab === "communities" ? "active" : ""}`} onClick={() => setActiveTab("communities")}>Communities</button>
-        <button className={`admin-tab ${activeTab === "users" ? "active" : ""}`} onClick={() => setActiveTab("users")}>Users</button>
-        <button className={`admin-tab ${activeTab === "analytics" ? "active" : ""}`} onClick={() => setActiveTab("analytics")}>Analytics</button>
-        <button className={`admin-tab ${activeTab === "settings" ? "active" : ""}`} onClick={() => setActiveTab("settings")}>Settings</button>
-      </div>
-
-      {activeTab === "schools" && (
-        <div className="admin-section">
-          <h3>Manage Schools</h3>
-
-          {loadingSchools ? (
-            <p className="loading-text">Loading schools...</p>
-          ) : schools.length === 0 ? (
-            <div className="empty-state">
-              <p>No schools registered on the platform yet.</p>
+      {/* ── Confirm Modal ── */}
+      {confirmAction && (
+        <div className="admin-modal-overlay" onClick={() => setConfirmAction(null)}>
+          <div className="admin-modal" onClick={(e) => e.stopPropagation()}>
+            <h3>{confirmAction.title}</h3>
+            <p>{confirmAction.message}</p>
+            <div className="admin-modal-actions">
+              <button className="btn-cancel" onClick={() => setConfirmAction(null)}>Cancel</button>
+              <button className="btn-danger" onClick={confirmAction.onConfirm}>Confirm</button>
             </div>
-          ) : (
-            <div className="admin-table">
-              <div className="admin-table-header schools-grid">
-                <span>School Name</span>
-                <span>Location</span>
-                <span>Principal</span>
-                <span>Status</span>
-              </div>
-              {schools.map((school) => (
-                <div key={school.id} className="admin-table-row schools-grid">
-                  <span className="table-primary">{school.schoolName}</span>
-                  <span>{school.location || "—"}</span>
-                  <span>{school.principalId?.substring(0, 8) || "—"}...</span>
-                  <span className="status-badge active">Active</span>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
-
-      {activeTab === "classes" && (
-        <div className="admin-section">
-          <h3>All Classes (Platform-wide)</h3>
-
-          {loadingClasses ? (
-            <p className="loading-text">Loading classes...</p>
-          ) : classes.length === 0 ? (
-            <div className="empty-state">
-              <p>No classes created yet.</p>
-            </div>
-          ) : (
-            <div className="admin-table">
-              <div className="admin-table-header classes-grid">
-                <span>Class Name</span>
-                <span>Program</span>
-                <span>School</span>
-                <span>Teacher</span>
-              </div>
-              {classes.map((cls) => (
-                <div key={cls.id} className="admin-table-row classes-grid">
-                  <span className="table-primary">{cls.className}</span>
-                  <span>{cls.programId || "—"}</span>
-                  <span>{getSchoolName(cls.schoolId)}</span>
-                  <span>{cls.teacherId?.substring(0, 8) || "—"}...</span>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
-
-      {activeTab === "contributions" && (
-        <div className="admin-section">
-          <h3>All Contributions (Platform-wide)</h3>
-
-          {loadingContributions ? (
-            <p className="loading-text">Loading contributions...</p>
-          ) : contributions.length === 0 ? (
-            <div className="empty-state">
-              <p>No contributions yet.</p>
-            </div>
-          ) : (
-            <div className="admin-table">
-              <div className="admin-table-header contributions-grid">
-                <span>Title</span>
-                <span>Type</span>
-                <span>Student</span>
-                <span>School</span>
-                <span>Status</span>
-              </div>
-              {contributions.map((c) => (
-                <div key={c.id} className="admin-table-row contributions-grid">
-                  <span className="table-primary">{c.title || `${c.species} - ${c.location}`}</span>
-                  <span>{c.type || "Sighting Report"}</span>
-                  <span>{c.studentEmail || "—"}</span>
-                  <span>{getSchoolName(c.schoolId)}</span>
-                  <span className={`status-badge ${c.status === "reviewed" ? "reviewed" : c.status === "approved" ? "active" : "pending"}`}>
-                    {c.status}
-                  </span>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
-
-      {activeTab === "communities" && (
-        <div className="admin-section">
-          <h3>Manage Communities</h3>
-
-          <div className="admin-table">
-            <div className="admin-table-header communities-grid">
-              <span>Community Name</span>
-              <span>Location</span>
-              <span>Members</span>
-              <span>Status</span>
-            </div>
-            {placeholderCommunities.map((comm) => (
-              <div key={comm.id} className="admin-table-row communities-grid">
-                <span className="table-primary">{comm.name}</span>
-                <span>{comm.location}</span>
-                <span>{comm.members}</span>
-                <span className="status-badge active">{comm.status}</span>
-              </div>
-            ))}
           </div>
         </div>
       )}
 
+      {/* ── Welcome ── */}
+      <div className="admin-welcome">
+        <div className="admin-welcome-text">
+          <h2>Welcome back, {userData?.displayName || user?.email}</h2>
+          <p className="admin-date">{today}</p>
+        </div>
+        <div className="admin-welcome-badge">
+          <span className="admin-role-chip">Super Admin</span>
+        </div>
+      </div>
+
+      {/* ── Tab Navigation ── */}
+      <div className="admin-tabs">
+        {[
+          { key: "overview", label: "Overview", icon: "📊" },
+          { key: "schools", label: "Schools", icon: "🏫" },
+          { key: "communities", label: "Communities", icon: "🌍" },
+          { key: "users", label: "Users", icon: "👥" },
+          { key: "library", label: "Public Library", icon: "📚" },
+          { key: "analytics", label: "Analytics", icon: "📈" },
+        ].map((tab) => (
+          <button
+            key={tab.key}
+            className={`admin-tab ${activeTab === tab.key ? "active" : ""}`}
+            onClick={() => {
+              setActiveTab(tab.key);
+              setSelectedSchool(null);
+              setSelectedOrg(null);
+            }}
+          >
+            <span className="tab-icon">{tab.icon}</span>
+            <span className="tab-label">{tab.label}</span>
+          </button>
+        ))}
+      </div>
+
+      {/* ════════════════════════════════════════════════════════════════
+          OVERVIEW TAB
+          ════════════════════════════════════════════════════════════════ */}
+      {activeTab === "overview" && (
+        <>
+          <div className="admin-stats-grid">
+            <div className="stat-card stat-primary" onClick={() => setActiveTab("schools")}>
+              <div className="stat-icon-wrap">🏫</div>
+              <div className="stat-info">
+                <span className="stat-number">{schools.length}</span>
+                <span className="stat-label">Schools</span>
+              </div>
+            </div>
+            <div className="stat-card stat-green" onClick={() => setActiveTab("communities")}>
+              <div className="stat-icon-wrap">🌍</div>
+              <div className="stat-info">
+                <span className="stat-number">{organizations.length}</span>
+                <span className="stat-label">Communities</span>
+              </div>
+            </div>
+            <div className="stat-card stat-blue" onClick={() => setActiveTab("users")}>
+              <div className="stat-icon-wrap">👥</div>
+              <div className="stat-info">
+                <span className="stat-number">{users.length}</span>
+                <span className="stat-label">Total Users</span>
+              </div>
+            </div>
+            <div className="stat-card stat-orange">
+              <div className="stat-icon-wrap">📝</div>
+              <div className="stat-info">
+                <span className="stat-number">{contributions.length}</span>
+                <span className="stat-label">Contributions</span>
+              </div>
+            </div>
+            <div className="stat-card stat-teal">
+              <div className="stat-icon-wrap">📚</div>
+              <div className="stat-info">
+                <span className="stat-number">{classes.length}</span>
+                <span className="stat-label">Classes</span>
+              </div>
+            </div>
+            <div className="stat-card stat-purple">
+              <div className="stat-icon-wrap">🎓</div>
+              <div className="stat-info">
+                <span className="stat-number">{enrollments.length}</span>
+                <span className="stat-label">Enrollments</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Quick role breakdown */}
+          <div className="admin-section">
+            <h3>User Breakdown</h3>
+            <div className="role-chips">
+              {Object.entries(roleCounts).map(([role, count]) => (
+                <div key={role} className={`role-chip role-chip-${role}`}>
+                  <span className="role-chip-count">{count}</span>
+                  <span className="role-chip-label">{role}s</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Quick overview tables */}
+          <div className="admin-grid-2col">
+            <div className="admin-section">
+              <div className="section-header">
+                <h3>Recent Schools</h3>
+                <button className="btn-link" onClick={() => setActiveTab("schools")}>View All</button>
+              </div>
+              {schools.length === 0 ? (
+                <p className="empty-text">No schools registered yet.</p>
+              ) : (
+                <div className="mini-list">
+                  {schools.slice(0, 5).map((s) => (
+                    <div key={s.id} className="mini-list-item" onClick={() => { setActiveTab("schools"); setSelectedSchool(s); }}>
+                      <span className="mini-list-name">{s.schoolName}</span>
+                      <span className="mini-list-meta">{schoolUsers(s.id).length} users</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+            <div className="admin-section">
+              <div className="section-header">
+                <h3>Recent Communities</h3>
+                <button className="btn-link" onClick={() => setActiveTab("communities")}>View All</button>
+              </div>
+              {organizations.length === 0 ? (
+                <p className="empty-text">No communities registered yet.</p>
+              ) : (
+                <div className="mini-list">
+                  {organizations.slice(0, 5).map((o) => (
+                    <div key={o.id} className="mini-list-item" onClick={() => { setActiveTab("communities"); setSelectedOrg(o); }}>
+                      <span className="mini-list-name">{o.orgName}</span>
+                      <span className="mini-list-meta">{orgUsers(o.id).length} members</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Contribution status overview */}
+          <div className="admin-section">
+            <h3>Contribution Status</h3>
+            <div className="status-bar-container">
+              <div className="status-bar">
+                {contributions.length > 0 ? (
+                  <>
+                    <div
+                      className="status-bar-segment status-pending"
+                      style={{ width: `${(statusBreakdown.pending / contributions.length) * 100}%` }}
+                      title={`Pending: ${statusBreakdown.pending}`}
+                    ></div>
+                    <div
+                      className="status-bar-segment status-reviewed"
+                      style={{ width: `${(statusBreakdown.reviewed / contributions.length) * 100}%` }}
+                      title={`Reviewed: ${statusBreakdown.reviewed}`}
+                    ></div>
+                  </>
+                ) : (
+                  <div className="status-bar-segment status-empty" style={{ width: "100%" }}></div>
+                )}
+              </div>
+              <div className="status-legend">
+                <span className="legend-item"><span className="legend-dot pending"></span> Pending ({statusBreakdown.pending || 0})</span>
+                <span className="legend-item"><span className="legend-dot reviewed"></span> Reviewed ({statusBreakdown.reviewed || 0})</span>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* ════════════════════════════════════════════════════════════════
+          SCHOOLS TAB
+          ════════════════════════════════════════════════════════════════ */}
+      {activeTab === "schools" && !selectedSchool && (
+        <div className="admin-section">
+          <div className="section-header">
+            <h3>All Schools ({schools.length})</h3>
+          </div>
+
+          {schools.length === 0 ? (
+            <div className="empty-state">
+              <div className="empty-icon">🏫</div>
+              <p>No schools registered on the platform yet.</p>
+            </div>
+          ) : (
+            <div className="card-grid">
+              {schoolContribStats.map((school) => (
+                <div key={school.id} className="entity-card">
+                  <div className="entity-card-header">
+                    <h4>{school.schoolName}</h4>
+                    <span className="entity-badge active">Active</span>
+                  </div>
+                  <p className="entity-location">{school.location || "Location not set"}</p>
+                  <div className="entity-stats-row">
+                    <div className="entity-stat">
+                      <span className="entity-stat-num">{school.studentCount}</span>
+                      <span className="entity-stat-lbl">Students</span>
+                    </div>
+                    <div className="entity-stat">
+                      <span className="entity-stat-num">{school.teacherCount}</span>
+                      <span className="entity-stat-lbl">Teachers</span>
+                    </div>
+                    <div className="entity-stat">
+                      <span className="entity-stat-num">{school.contributionCount}</span>
+                      <span className="entity-stat-lbl">Contributions</span>
+                    </div>
+                  </div>
+                  <div className="entity-card-actions">
+                    <button className="btn-view" onClick={() => setSelectedSchool(school)}>View Details</button>
+                    <button className="btn-delete" onClick={() => handleDeleteSchool(school)}>Delete</button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── School Detail View ── */}
+      {activeTab === "schools" && selectedSchool && (
+        <div className="detail-view">
+          <button className="btn-back" onClick={() => setSelectedSchool(null)}>
+            ← Back to All Schools
+          </button>
+
+          <div className="detail-header">
+            <div>
+              <h2>{selectedSchool.schoolName}</h2>
+              <p className="detail-subtitle">{selectedSchool.location || "Location not set"}</p>
+              {selectedSchool.description && <p className="detail-desc">{selectedSchool.description}</p>}
+            </div>
+            <button className="btn-delete-lg" onClick={() => handleDeleteSchool(selectedSchool)}>Delete School</button>
+          </div>
+
+          {/* School stats */}
+          <div className="detail-stats">
+            <div className="detail-stat-card">
+              <span className="detail-stat-num">{schoolUsers(selectedSchool.id).filter((u) => u.role === "student").length}</span>
+              <span className="detail-stat-lbl">Students</span>
+            </div>
+            <div className="detail-stat-card">
+              <span className="detail-stat-num">{schoolUsers(selectedSchool.id).filter((u) => u.role === "teacher").length}</span>
+              <span className="detail-stat-lbl">Teachers</span>
+            </div>
+            <div className="detail-stat-card">
+              <span className="detail-stat-num">{schoolUsers(selectedSchool.id).filter((u) => u.role === "principal").length}</span>
+              <span className="detail-stat-lbl">Principals</span>
+            </div>
+            <div className="detail-stat-card">
+              <span className="detail-stat-num">{schoolContribs(selectedSchool.id).length}</span>
+              <span className="detail-stat-lbl">Contributions</span>
+            </div>
+            <div className="detail-stat-card">
+              <span className="detail-stat-num">{schoolClasses(selectedSchool.id).length}</span>
+              <span className="detail-stat-lbl">Classes</span>
+            </div>
+            <div className="detail-stat-card">
+              <span className="detail-stat-num">{schoolEnrollments(selectedSchool.id).length}</span>
+              <span className="detail-stat-lbl">Enrollments</span>
+            </div>
+          </div>
+
+          {/* School users table */}
+          <div className="admin-section">
+            <h3>Registered Users ({schoolUsers(selectedSchool.id).length})</h3>
+            {schoolUsers(selectedSchool.id).length === 0 ? (
+              <p className="empty-text">No users registered in this school.</p>
+            ) : (
+              <div className="admin-table">
+                <div className="admin-table-header detail-users-grid">
+                  <span>Name</span>
+                  <span>Email</span>
+                  <span>Role</span>
+                  <span>Joined</span>
+                </div>
+                {schoolUsers(selectedSchool.id).map((u) => (
+                  <div key={u.id} className="admin-table-row detail-users-grid">
+                    <span className="table-primary">{u.displayName || "—"}</span>
+                    <span>{u.email}</span>
+                    <span><span className={`role-badge role-${u.role}`}>{u.role}</span></span>
+                    <span>{u.createdAt?.toDate ? u.createdAt.toDate().toLocaleDateString() : "—"}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* School contributions table */}
+          <div className="admin-section">
+            <h3>Contributions ({schoolContribs(selectedSchool.id).length})</h3>
+            {schoolContribs(selectedSchool.id).length === 0 ? (
+              <p className="empty-text">No contributions from this school yet.</p>
+            ) : (
+              <div className="admin-table">
+                <div className="admin-table-header detail-contribs-grid">
+                  <span>Title</span>
+                  <span>Type</span>
+                  <span>By</span>
+                  <span>Status</span>
+                  <span>Public</span>
+                </div>
+                {schoolContribs(selectedSchool.id).map((c) => (
+                  <div key={c.id} className="admin-table-row detail-contribs-grid">
+                    <span className="table-primary">{c.title || `${c.species || "Untitled"}`}</span>
+                    <span>{c.type || "Sighting Report"}</span>
+                    <span>{c.studentName || c.studentEmail || "—"}</span>
+                    <span><span className={`status-badge ${c.status}`}>{c.status}</span></span>
+                    <span>{c.isVisibleInPublic ? "Yes" : "No"}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* School classes table */}
+          <div className="admin-section">
+            <h3>Classes ({schoolClasses(selectedSchool.id).length})</h3>
+            {schoolClasses(selectedSchool.id).length === 0 ? (
+              <p className="empty-text">No classes in this school.</p>
+            ) : (
+              <div className="admin-table">
+                <div className="admin-table-header detail-classes-grid">
+                  <span>Class Name</span>
+                  <span>Program</span>
+                  <span>Teacher</span>
+                </div>
+                {schoolClasses(selectedSchool.id).map((cls) => (
+                  <div key={cls.id} className="admin-table-row detail-classes-grid">
+                    <span className="table-primary">{cls.className}</span>
+                    <span>{PROGRAMS[cls.classProgram] || cls.classProgram || "—"}</span>
+                    <span>{getUserName(cls.teacherId)}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ════════════════════════════════════════════════════════════════
+          COMMUNITIES TAB
+          ════════════════════════════════════════════════════════════════ */}
+      {activeTab === "communities" && !selectedOrg && (
+        <div className="admin-section">
+          <div className="section-header">
+            <h3>All Communities ({organizations.length})</h3>
+          </div>
+
+          {organizations.length === 0 ? (
+            <div className="empty-state">
+              <div className="empty-icon">🌍</div>
+              <p>No communities registered on the platform yet.</p>
+            </div>
+          ) : (
+            <div className="card-grid">
+              {orgContribStats.map((org) => (
+                <div key={org.id} className="entity-card entity-card-community">
+                  <div className="entity-card-header">
+                    <h4>{org.orgName}</h4>
+                    <span className="entity-badge active">Active</span>
+                  </div>
+                  <p className="entity-location">{org.location || org.bio || "No description"}</p>
+                  <div className="entity-stats-row">
+                    <div className="entity-stat">
+                      <span className="entity-stat-num">{org.memberCount}</span>
+                      <span className="entity-stat-lbl">Members</span>
+                    </div>
+                    <div className="entity-stat">
+                      <span className="entity-stat-num">{org.contributionCount}</span>
+                      <span className="entity-stat-lbl">Contributions</span>
+                    </div>
+                  </div>
+                  <div className="entity-card-actions">
+                    <button className="btn-view" onClick={() => setSelectedOrg(org)}>View Details</button>
+                    <button className="btn-delete" onClick={() => handleDeleteOrg(org)}>Delete</button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── Community Detail View ── */}
+      {activeTab === "communities" && selectedOrg && (
+        <div className="detail-view">
+          <button className="btn-back" onClick={() => setSelectedOrg(null)}>
+            ← Back to All Communities
+          </button>
+
+          <div className="detail-header">
+            <div>
+              <h2>{selectedOrg.orgName}</h2>
+              <p className="detail-subtitle">{selectedOrg.location || "Location not set"}</p>
+              {selectedOrg.bio && <p className="detail-desc">{selectedOrg.bio}</p>}
+            </div>
+            <button className="btn-delete-lg" onClick={() => handleDeleteOrg(selectedOrg)}>Delete Community</button>
+          </div>
+
+          <div className="detail-stats">
+            <div className="detail-stat-card">
+              <span className="detail-stat-num">{orgUsers(selectedOrg.id).filter((u) => u.role === "chairman").length}</span>
+              <span className="detail-stat-lbl">Chairman</span>
+            </div>
+            <div className="detail-stat-card">
+              <span className="detail-stat-num">{orgUsers(selectedOrg.id).filter((u) => u.role === "member").length}</span>
+              <span className="detail-stat-lbl">Members</span>
+            </div>
+            <div className="detail-stat-card">
+              <span className="detail-stat-num">{orgContribs(selectedOrg.id).length}</span>
+              <span className="detail-stat-lbl">Contributions</span>
+            </div>
+            <div className="detail-stat-card">
+              <span className="detail-stat-num">{orgContribs(selectedOrg.id).filter((c) => c.status === "reviewed").length}</span>
+              <span className="detail-stat-lbl">Reviewed</span>
+            </div>
+          </div>
+
+          {/* Community users */}
+          <div className="admin-section">
+            <h3>Members ({orgUsers(selectedOrg.id).length})</h3>
+            {orgUsers(selectedOrg.id).length === 0 ? (
+              <p className="empty-text">No members in this community.</p>
+            ) : (
+              <div className="admin-table">
+                <div className="admin-table-header detail-users-grid">
+                  <span>Name</span>
+                  <span>Email</span>
+                  <span>Role</span>
+                  <span>Joined</span>
+                </div>
+                {orgUsers(selectedOrg.id).map((u) => (
+                  <div key={u.id} className="admin-table-row detail-users-grid">
+                    <span className="table-primary">{u.displayName || "—"}</span>
+                    <span>{u.email}</span>
+                    <span><span className={`role-badge role-${u.role}`}>{u.role}</span></span>
+                    <span>{u.createdAt?.toDate ? u.createdAt.toDate().toLocaleDateString() : "—"}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Community contributions */}
+          <div className="admin-section">
+            <h3>Contributions ({orgContribs(selectedOrg.id).length})</h3>
+            {orgContribs(selectedOrg.id).length === 0 ? (
+              <p className="empty-text">No contributions from this community yet.</p>
+            ) : (
+              <div className="admin-table">
+                <div className="admin-table-header detail-contribs-grid">
+                  <span>Title</span>
+                  <span>Type</span>
+                  <span>By</span>
+                  <span>Status</span>
+                  <span>Public</span>
+                </div>
+                {orgContribs(selectedOrg.id).map((c) => (
+                  <div key={c.id} className="admin-table-row detail-contribs-grid">
+                    <span className="table-primary">{c.title || `${c.species || "Untitled"}`}</span>
+                    <span>{c.type || "Sighting Report"}</span>
+                    <span>{c.studentName || c.studentEmail || "—"}</span>
+                    <span><span className={`status-badge ${c.status}`}>{c.status}</span></span>
+                    <span>{c.isVisibleInPublic ? "Yes" : "No"}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ════════════════════════════════════════════════════════════════
+          USERS TAB
+          ════════════════════════════════════════════════════════════════ */}
       {activeTab === "users" && (
         <div className="admin-section">
-          <h3>User Management (All Users - Global)</h3>
+          <div className="section-header">
+            <h3>All Users ({users.length})</h3>
+          </div>
 
           <div className="user-filters">
             <input
-              className="user-search"
+              className="filter-input"
               type="text"
-              placeholder="Search by email..."
+              placeholder="Search by name or email..."
               value={userSearch}
               onChange={(e) => setUserSearch(e.target.value)}
             />
             <select
-              className="user-role-filter"
+              className="filter-select"
               value={userRoleFilter}
               onChange={(e) => setUserRoleFilter(e.target.value)}
             >
               <option value="all">All Roles</option>
-              <option value="student">Student ({roleCounts.student})</option>
-              <option value="teacher">Teacher ({roleCounts.teacher})</option>
-              <option value="principal">Principal ({roleCounts.principal})</option>
-              <option value="admin">Admin ({roleCounts.admin})</option>
+              <option value="student">Students ({roleCounts.student})</option>
+              <option value="teacher">Teachers ({roleCounts.teacher})</option>
+              <option value="principal">Principals ({roleCounts.principal})</option>
+              <option value="chairman">Chairmen ({roleCounts.chairman})</option>
+              <option value="member">Members ({roleCounts.member})</option>
+              <option value="admin">Admins ({roleCounts.admin})</option>
+            </select>
+            <select
+              className="filter-select"
+              value={userOrgFilter}
+              onChange={(e) => setUserOrgFilter(e.target.value)}
+            >
+              <option value="all">All Affiliations</option>
+              <option value="school">School Users</option>
+              <option value="community">Community Users</option>
+              <option value="unaffiliated">Unaffiliated</option>
             </select>
           </div>
 
-          {loadingUsers ? (
-            <p className="loading-text">Loading users...</p>
+          <p className="filter-count">Showing {filteredUsers.length} of {users.length} users</p>
+
+          {filteredUsers.length === 0 ? (
+            <div className="empty-state">
+              <p>No users match your filters.</p>
+            </div>
           ) : (
             <div className="admin-table">
               <div className="admin-table-header users-grid">
+                <span>Name</span>
                 <span>Email</span>
                 <span>Role</span>
-                <span>School</span>
+                <span>Affiliation</span>
                 <span>Joined</span>
               </div>
               {filteredUsers.map((u) => (
                 <div key={u.id} className="admin-table-row users-grid">
-                  <span>{u.email}</span>
-                  <span className={`role-badge role-${u.role}`}>{u.role}</span>
-                  <span>{getSchoolName(u.schoolId)}</span>
+                  <span className="table-primary">{u.displayName || "—"}</span>
+                  <span className="table-email">{u.email}</span>
+                  <span><span className={`role-badge role-${u.role}`}>{u.role}</span></span>
+                  <span>
+                    {u.schoolId ? getSchoolName(u.schoolId) :
+                     u.orgId ? getOrgName(u.orgId) : "—"}
+                  </span>
                   <span>{u.createdAt?.toDate ? u.createdAt.toDate().toLocaleDateString() : "—"}</span>
                 </div>
               ))}
-              {filteredUsers.length === 0 && (
-                <div className="admin-table-row users-grid">
-                  <span className="no-results-text">No users found matching your filters.</span>
-                </div>
-              )}
             </div>
           )}
         </div>
       )}
 
-      {activeTab === "analytics" && (
+      {/* ════════════════════════════════════════════════════════════════
+          PUBLIC LIBRARY TAB (Manage Showcase)
+          ════════════════════════════════════════════════════════════════ */}
+      {activeTab === "library" && (
         <div className="admin-section">
-          <h3>Business Analytics</h3>
-          <p className="analytics-description">
-            Real-time analytics across all schools and contributions on the platform.
+          <div className="section-header">
+            <h3>Public Library Showcase ({showcaseItems.length} items)</h3>
+          </div>
+          <p className="section-desc">
+            These contributions are visible in the public library showcase. You can remove any item from public visibility.
           </p>
 
-          {/* Platform overview */}
-          <div className="analytics-subsection">
-            <h4>Platform Overview</h4>
-            <div className="analytics-overview-grid">
+          <div className="user-filters">
+            <input
+              className="filter-input"
+              type="text"
+              placeholder="Search by title, type, or contributor..."
+              value={showcaseSearch}
+              onChange={(e) => setShowcaseSearch(e.target.value)}
+            />
+          </div>
+
+          {loadingShowcase ? (
+            <p className="empty-text">Loading showcase items...</p>
+          ) : filteredShowcase.length === 0 ? (
+            <div className="empty-state">
+              <div className="empty-icon">📚</div>
+              <p>{showcaseItems.length === 0 ? "No items published to the public showcase yet." : "No items match your search."}</p>
+            </div>
+          ) : (
+            <div className="showcase-grid">
+              {filteredShowcase.map((item) => (
+                <div key={item.id} className="showcase-card">
+                  <div className="showcase-card-top">
+                    <span className="showcase-type">{item.type || "Sighting Report"}</span>
+                    <span className={`status-badge ${item.status}`}>{item.status}</span>
+                  </div>
+                  <h4 className="showcase-title">{item.title || `${item.species || "Untitled"}`}</h4>
+                  <p className="showcase-meta">
+                    By: {item.studentName || item.studentEmail || "Anonymous"}<br />
+                    {item.schoolId ? `School: ${getSchoolName(item.schoolId)}` :
+                     item.orgId ? `Community: ${getOrgName(item.orgId)}` : ""}
+                  </p>
+                  {item.description && (
+                    <p className="showcase-desc">{item.description.substring(0, 120)}{item.description.length > 120 ? "..." : ""}</p>
+                  )}
+                  <button className="btn-remove-showcase" onClick={() => handleRemoveFromShowcase(item)}>
+                    Remove from Showcase
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ════════════════════════════════════════════════════════════════
+          ANALYTICS TAB
+          ════════════════════════════════════════════════════════════════ */}
+      {activeTab === "analytics" && (
+        <>
+          {/* Platform Overview */}
+          <div className="admin-section">
+            <h3>Platform Overview</h3>
+            <div className="analytics-metrics">
+              <div className="analytics-metric">
+                <span className="metric-value">{schools.length}</span>
+                <span className="metric-label">Schools</span>
+              </div>
+              <div className="analytics-metric">
+                <span className="metric-value">{organizations.length}</span>
+                <span className="metric-label">Communities</span>
+              </div>
+              <div className="analytics-metric">
+                <span className="metric-value">{users.length}</span>
+                <span className="metric-label">Total Users</span>
+              </div>
               <div className="analytics-metric">
                 <span className="metric-value">{contributions.length}</span>
-                <span className="metric-label">Total Contributions</span>
-              </div>
-              <div className="analytics-metric">
-                <span className="metric-value">{sightingCount}</span>
-                <span className="metric-label">Total Sightings</span>
-              </div>
-              <div className="analytics-metric">
-                <span className="metric-value">{enrollmentCount}</span>
-                <span className="metric-label">Program Enrollments</span>
-              </div>
-              <div className="analytics-metric">
-                <span className="metric-value">{messageCount}</span>
-                <span className="metric-label">Messages Sent</span>
+                <span className="metric-label">Contributions</span>
               </div>
               <div className="analytics-metric">
                 <span className="metric-value">{statusBreakdown.pending || 0}</span>
@@ -487,166 +983,119 @@ export default function AdminDashboard() {
             </div>
           </div>
 
-          {/* Contribution by Type */}
-          <div className="analytics-subsection">
-            <h4>Contributions by Type</h4>
-            {contributionByType.length === 0 ? (
-              <p className="no-data-text">No contribution data yet.</p>
-            ) : (
-              <div className="program-bars">
-                {contributionByType.map((ct) => (
-                  <div key={ct.name} className="bar-row">
-                    <span className="bar-label">{ct.name}</span>
-                    <div className="bar-track">
-                      <div
-                        className="bar-fill bar-fill-blue"
-                        style={{ width: `${(ct.count / maxContribType) * 100}%` }}
-                      ></div>
-                    </div>
-                    <span className="bar-value">{ct.count}</span>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* Popular Programs */}
-          <div className="analytics-subsection">
-            <h4>Most Popular Programs (by Enrollments)</h4>
-            {popularPrograms.length === 0 ? (
-              <p className="no-data-text">No enrollment data yet.</p>
-            ) : (
-              <div className="program-bars">
-                {popularPrograms.map((p) => (
-                  <div key={p.name} className="bar-row">
-                    <span className="bar-label">{p.name}</span>
-                    <div className="bar-track">
-                      <div
-                        className="bar-fill"
-                        style={{ width: `${(p.enrollments / maxProgEnrollment) * 100}%` }}
-                      ></div>
-                    </div>
-                    <span className="bar-value">{p.enrollments}</span>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* Per-school contributions */}
-          <div className="analytics-subsection">
-            <h4>Contributions by School</h4>
-            {schoolContributions.length === 0 ? (
-              <p className="no-data-text">No school contribution data yet.</p>
-            ) : (
-              <div className="admin-table">
-                <div className="admin-table-header region-grid">
-                  <span>School</span>
-                  <span>Contributions</span>
-                  <span>Share</span>
-                </div>
-                {schoolContributions.map((sc) => (
-                  <div key={sc.schoolId} className="admin-table-row region-grid">
-                    <span>{sc.schoolName}</span>
-                    <span>{sc.count}</span>
-                    <span>{contributions.length > 0 ? Math.round((sc.count / contributions.length) * 100) : 0}%</span>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
           {/* User Role Distribution */}
-          <div className="analytics-subsection">
-            <h4>User Role Distribution</h4>
+          <div className="admin-section">
+            <h3>User Role Distribution</h3>
             <div className="role-distribution">
               {Object.entries(roleCounts).map(([roleName, count]) => (
-                <div key={roleName} className="role-dist-item">
+                <div key={roleName} className="role-dist-row">
+                  <span className="role-dist-label">{roleName}</span>
                   <div className="role-dist-bar-bg">
                     <div
                       className={`role-dist-bar role-dist-${roleName}`}
                       style={{ width: `${users.length > 0 ? (count / users.length) * 100 : 0}%` }}
                     ></div>
                   </div>
-                  <div className="role-dist-info">
-                    <span className="role-dist-name">{roleName}</span>
-                    <span className="role-dist-count">{count} ({users.length > 0 ? Math.round((count / users.length) * 100) : 0}%)</span>
-                  </div>
+                  <span className="role-dist-count">{count} ({users.length > 0 ? Math.round((count / users.length) * 100) : 0}%)</span>
                 </div>
               ))}
             </div>
           </div>
-        </div>
-      )}
 
-      {activeTab === "settings" && (
-        <div className="admin-section">
-          <h3>System Settings</h3>
-
-          <div className="settings-form">
-            <div className="settings-row">
-              <label className="settings-label">Platform Name</label>
-              <input
-                className="settings-input"
-                type="text"
-                value={platformName}
-                onChange={(e) => setPlatformName(e.target.value)}
-              />
-            </div>
-
-            <div className="settings-row">
-              <label className="settings-label">Contact Email</label>
-              <input
-                className="settings-input"
-                type="email"
-                value={contactEmail}
-                onChange={(e) => setContactEmail(e.target.value)}
-              />
-            </div>
-
-            <div className="settings-row">
-              <label className="settings-label">Maintenance Mode</label>
-              <div className="toggle-container">
-                <button
-                  className={`toggle-btn ${maintenanceMode ? "toggle-on" : "toggle-off"}`}
-                  onClick={() => setMaintenanceMode(!maintenanceMode)}
-                >
-                  <span className="toggle-knob"></span>
-                </button>
-                <span className="toggle-label">
-                  {maintenanceMode ? "Enabled" : "Disabled"}
-                </span>
+          {/* Contributions by Type */}
+          <div className="admin-section">
+            <h3>Contributions by Type</h3>
+            {contributionsByType.length === 0 ? (
+              <p className="empty-text">No contribution data yet.</p>
+            ) : (
+              <div className="bar-chart">
+                {contributionsByType.map(([type, count]) => (
+                  <div key={type} className="bar-row">
+                    <span className="bar-label">{type}</span>
+                    <div className="bar-track">
+                      <div className="bar-fill bar-fill-blue" style={{ width: `${(count / maxContribType) * 100}%` }}></div>
+                    </div>
+                    <span className="bar-value">{count}</span>
+                  </div>
+                ))}
               </div>
-            </div>
-
-            <button className="settings-save-btn">Save Settings</button>
-
-            <div className="seed-data-section">
-              <h4>Demo Data</h4>
-              <p className="seed-desc">Seed the database with sample species, programs, and library articles. Only seeds empty collections.</p>
-              {seedMessage && <p className="seed-message">{seedMessage}</p>}
-              <button
-                className="seed-data-btn"
-                disabled={seeding}
-                onClick={async () => {
-                  setSeeding(true);
-                  setSeedMessage("");
-                  try {
-                    const results = await seedAllData();
-                    setSeedMessage(results.join(" | "));
-                  } catch (err) {
-                    console.error("Seed error:", err);
-                    setSeedMessage("Failed to seed data.");
-                  } finally {
-                    setSeeding(false);
-                  }
-                }}
-              >
-                {seeding ? "Seeding..." : "Seed Demo Data"}
-              </button>
-            </div>
+            )}
           </div>
-        </div>
+
+          {/* Program Enrollments */}
+          <div className="admin-section">
+            <h3>Program Enrollments</h3>
+            {programEnrollments.length === 0 ? (
+              <p className="empty-text">No enrollment data yet.</p>
+            ) : (
+              <div className="bar-chart">
+                {programEnrollments.map((p) => (
+                  <div key={p.name} className="bar-row">
+                    <span className="bar-label">{p.name}</span>
+                    <div className="bar-track">
+                      <div className="bar-fill bar-fill-green" style={{ width: `${(p.count / maxProgram) * 100}%` }}></div>
+                    </div>
+                    <span className="bar-value">{p.count}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Per-School Analytics */}
+          <div className="admin-section">
+            <h3>Contributions by School</h3>
+            {schoolContribStats.length === 0 ? (
+              <p className="empty-text">No school data yet.</p>
+            ) : (
+              <div className="admin-table">
+                <div className="admin-table-header analytics-school-grid">
+                  <span>School</span>
+                  <span>Users</span>
+                  <span>Students</span>
+                  <span>Teachers</span>
+                  <span>Contributions</span>
+                  <span>Share</span>
+                </div>
+                {schoolContribStats.map((s) => (
+                  <div key={s.id} className="admin-table-row analytics-school-grid">
+                    <span className="table-primary">{s.schoolName}</span>
+                    <span>{s.userCount}</span>
+                    <span>{s.studentCount}</span>
+                    <span>{s.teacherCount}</span>
+                    <span>{s.contributionCount}</span>
+                    <span>{contributions.length > 0 ? Math.round((s.contributionCount / contributions.length) * 100) : 0}%</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Per-Community Analytics */}
+          <div className="admin-section">
+            <h3>Contributions by Community</h3>
+            {orgContribStats.length === 0 ? (
+              <p className="empty-text">No community data yet.</p>
+            ) : (
+              <div className="admin-table">
+                <div className="admin-table-header analytics-org-grid">
+                  <span>Community</span>
+                  <span>Members</span>
+                  <span>Contributions</span>
+                  <span>Share</span>
+                </div>
+                {orgContribStats.map((o) => (
+                  <div key={o.id} className="admin-table-row analytics-org-grid">
+                    <span className="table-primary">{o.orgName}</span>
+                    <span>{o.memberCount}</span>
+                    <span>{o.contributionCount}</span>
+                    <span>{contributions.length > 0 ? Math.round((o.contributionCount / contributions.length) * 100) : 0}%</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </>
       )}
     </div>
   );

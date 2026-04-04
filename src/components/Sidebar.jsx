@@ -69,8 +69,13 @@ const navLinks = {
   ],
   admin: [
     { label: "Dashboard", path: "/admin", icon: "\u{1F3E0}", tooltip: "Platform-wide admin dashboard" },
-    { label: "Settings", path: "/settings", icon: "\u{2699}\uFE0F", tooltip: "Profile settings" },
+    { label: "Schools", path: "/admin/schools", icon: "\u{1F3EB}", tooltip: "View and manage all schools" },
+    { label: "Communities", path: "/admin/communities", icon: "\u{1F30D}", tooltip: "View and manage all communities" },
+    { label: "Users", path: "/admin/users", icon: "\u{1F465}", tooltip: "View all registered users" },
+    { label: "Manage Library", path: "/admin/manage-library", icon: "\u{1F4DA}", tooltip: "Manage public library showcase" },
+    { label: "Analytics", path: "/admin/analytics", icon: "\u{1F4C8}", tooltip: "Platform-wide analytics" },
     { label: "Public Library", path: "/admin/public-library", icon: "\u{1F30D}", tooltip: "Browse the public species library and showcase" },
+    { label: "Settings", path: "/settings", icon: "\u{2699}\uFE0F", tooltip: "Profile settings" },
   ],
 };
 

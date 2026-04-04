@@ -456,6 +456,61 @@ export default function App() {
         />
 
         <Route
+          path="/admin/schools"
+          element={
+            <ProtectedRoute allowedRoles={["admin"]}>
+              <DashboardLayout title="Manage Schools">
+                <AdminDashboard initialTab="schools" />
+              </DashboardLayout>
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/admin/communities"
+          element={
+            <ProtectedRoute allowedRoles={["admin"]}>
+              <DashboardLayout title="Manage Communities">
+                <AdminDashboard initialTab="communities" />
+              </DashboardLayout>
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/admin/users"
+          element={
+            <ProtectedRoute allowedRoles={["admin"]}>
+              <DashboardLayout title="Manage Users">
+                <AdminDashboard initialTab="users" />
+              </DashboardLayout>
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/admin/manage-library"
+          element={
+            <ProtectedRoute allowedRoles={["admin"]}>
+              <DashboardLayout title="Manage Public Library">
+                <AdminDashboard initialTab="library" />
+              </DashboardLayout>
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/admin/analytics"
+          element={
+            <ProtectedRoute allowedRoles={["admin"]}>
+              <DashboardLayout title="Platform Analytics">
+                <AdminDashboard initialTab="analytics" />
+              </DashboardLayout>
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
           path="/admin/public-library"
           element={
             <ProtectedRoute allowedRoles={["admin"]}>
