@@ -164,6 +164,10 @@ export default function Messages() {
     const unsub2 = onSnapshot(recvQ, (snap) => {
       recvMsgs = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
       merge();
+      // If we receive unread messages while the chat is actively open, mark them as read immediately
+      if (recvMsgs.some((m) => !m.read)) {
+        markMessageNotificationsRead(user.uid, selectedUserId);
+      }
     });
 
     return () => {

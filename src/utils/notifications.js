@@ -88,6 +88,35 @@ export async function markAllNotificationsRead(userId) {
     batches.push(batch);
 
     await Promise.all(batches.map((b) => b.commit()));
+
+    // Also mark all actual messages for this user as read
+    try {
+      const msgQ = query(
+        collection(db, "messages"),
+        where("receiverId", "==", userId),
+        where("read", "==", false)
+      );
+      const msgSnap = await getDocs(msgQ);
+      if (!msgSnap.empty) {
+        const msgBatches = [];
+        let msgBatch = writeBatch(db);
+        let msgOpCount = 0;
+        msgSnap.docs.forEach((d) => {
+          msgBatch.update(doc(db, "messages", d.id), { read: true });
+          msgOpCount++;
+          if (msgOpCount === 499) {
+            msgBatches.push(msgBatch);
+            msgBatch = writeBatch(db);
+            msgOpCount = 0;
+          }
+        });
+        msgBatches.push(msgBatch);
+        await Promise.all(msgBatches.map((b) => b.commit()));
+      }
+    } catch (err) {
+      console.error("Error marking all real messages as read:", err);
+    }
+
     return snap.size;
   } catch (err) {
     console.error("Error marking all notifications read:", err);
@@ -117,6 +146,26 @@ export async function markMessageNotificationsRead(recipientId, senderId) {
       batch.update(doc(db, "notifications", d.id), { isRead: true, read: true });
     });
     await batch.commit();
+
+    // Also mark actual messages from this sender as read
+    try {
+      const msgQ = query(
+        collection(db, "messages"),
+        where("receiverId", "==", recipientId),
+        where("senderId", "==", senderId),
+        where("read", "==", false)
+      );
+      const msgSnap = await getDocs(msgQ);
+      if (!msgSnap.empty) {
+        const msgBatch = writeBatch(db);
+        msgSnap.docs.forEach((d) => {
+          msgBatch.update(doc(db, "messages", d.id), { read: true });
+        });
+        await msgBatch.commit();
+      }
+    } catch (err) {
+      console.error("Error marking real messages as read:", err);
+    }
   } catch (err) {
     console.error("Error marking message notifications read:", err);
   }
