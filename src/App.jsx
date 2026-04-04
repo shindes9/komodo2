@@ -16,6 +16,7 @@ import SightingsList from "./pages/SightingsList";
 import Messages from "./pages/Messages";
 import SchoolLibrary from "./pages/SchoolLibrary";
 import StudentProfile from "./pages/StudentProfile";
+import SpeciesQuiz from "./pages/SpeciesQuiz";
 import CommunityDashboard from "./pages/CommunityDashboard";
 import MemberDashboard from "./pages/MemberDashboard";
 import MemberProfile from "./pages/MemberProfile";
