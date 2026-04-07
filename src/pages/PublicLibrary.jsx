@@ -13,6 +13,7 @@ import {
   getDoc,
 } from "firebase/firestore";
 import { SPECIES_DATA, BOOKSHELF_RESOURCES } from "../data/speciesData";
+import FundraiserWidget from "../components/FundraiserWidget";
 import "./PublicLibrary.css";
 
 /* ================================================================
@@ -472,6 +473,14 @@ export default function PublicLibrary() {
             <span className="pl-tab-icon">📰</span>
             <span>Educational Articles</span>
           </button>
+          <button
+            className={`pl-tab ${activeTab === "donate" ? "pl-tab-active" : ""}`}
+            onClick={() => setActiveTab("donate")}
+            title="Support Komodo Hub's mission through donations"
+          >
+            <span className="pl-tab-icon">💚</span>
+            <span>Support Us</span>
+          </button>
         </nav>
 
         {/* ═══════════════════════════════════════════════════════
@@ -923,6 +932,53 @@ export default function PublicLibrary() {
                 </div>
               </div>
             )}
+          </section>
+        )}
+
+        {/* ═══════════════════════════════════════════════════════
+            TAB 5: SUPPORT US — DONATION / FUNDRAISER
+            ═══════════════════════════════════════════════════════ */}
+        {activeTab === "donate" && (
+          <section className="pl-section">
+            <div className="pl-section-header">
+              <h2>Support Our Mission</h2>
+              <p className="pl-section-desc">
+                Your contribution helps us build a better platform, reach wider audiences,
+                and protect Indonesia's most endangered species. Every donation makes a difference.
+              </p>
+            </div>
+
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "2rem", padding: "1.5rem 0" }}>
+              {/* Impact highlights */}
+              <div style={{ display: "flex", gap: "1.5rem", flexWrap: "wrap", justifyContent: "center", maxWidth: "800px" }}>
+                {[
+                  { icon: "🌿", title: "Platform Growth", desc: "Fund new features that empower students and researchers." },
+                  { icon: "🦎", title: "Species Coverage", desc: "Expand our database to cover more endangered species." },
+                  { icon: "🏫", title: "School Outreach", desc: "Help us onboard more schools across the Indonesian archipelago." },
+                ].map((card) => (
+                  <div
+                    key={card.title}
+                    style={{
+                      flex: "1 1 200px",
+                      background: "rgba(52, 211, 153, 0.08)",
+                      border: "1px solid rgba(52, 211, 153, 0.3)",
+                      borderRadius: "12px",
+                      padding: "1.25rem",
+                      textAlign: "center",
+                    }}
+                  >
+                    <div style={{ fontSize: "2rem", marginBottom: "0.5rem" }}>{card.icon}</div>
+                    <h3 style={{ margin: "0 0 0.4rem", fontSize: "1rem", fontWeight: 600 }}>{card.title}</h3>
+                    <p style={{ margin: 0, fontSize: "0.875rem", color: "#6b7280" }}>{card.desc}</p>
+                  </div>
+                ))}
+              </div>
+
+              {/* GoFundMe widget */}
+              <div style={{ width: "100%", maxWidth: "700px" }}>
+                <FundraiserWidget />
+              </div>
+            </div>
           </section>
         )}
 
