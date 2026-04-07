@@ -689,6 +689,8 @@ export default function PublicLibrary() {
                   <div
                     key={item.id}
                     className={`showcase-card ${item.orgType === "community" ? "showcase-card-community" : "showcase-card-school"}`}
+                    onClick={() => navigate(`/sighting/${item.id}`)}
+                    style={{ cursor: "pointer" }}
                   >
                     {item.photoURL && (
                       <img src={item.photoURL} alt="Contribution" className="showcase-card-img" />
@@ -711,7 +713,7 @@ export default function PublicLibrary() {
                             <span>🏫 {item.orgName}</span>
                             {item.contributorName && (
                               <span className="showcase-contributor-name" style={{ marginLeft: "8px", fontSize: "12px", color: "#666" }}>
-                                — {item.contributorName}
+                                — {item.contributorName} (Student)
                               </span>
                             )}
                           </div>
@@ -721,12 +723,13 @@ export default function PublicLibrary() {
                         {item.orgType === "community" && (
                           <div className="showcase-contributor">
                             <span className="showcase-contributor-name">
-                              👤 {item.contributorName}
+                              👤 {item.contributorName} {item.contributorName !== "Community Member" ? "(Community Member)" : ""}
                             </span>
                             {item.contributorProfileLink && (
                               <Link
                                 to={item.contributorProfileLink}
                                 className="showcase-profile-link"
+                                onClick={(e) => e.stopPropagation()}
                               >
                                 View Profile →
                               </Link>

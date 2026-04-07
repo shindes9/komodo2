@@ -27,6 +27,7 @@ import StudentDetail from "./pages/StudentDetail";
 import MyCanvas from "./pages/MyCanvas";
 import LandingPage from "./pages/LandingPage";
 import NotFound from "./pages/NotFound";
+import ContributionDetailView from "./pages/ContributionDetailView";
 import "./App.css";
 
 function DashboardLayout({ title, children }) {
@@ -53,6 +54,7 @@ export default function App() {
         <Route path="/auth" element={<AuthPage />} />
         <Route path="/library" element={<PublicLibrary />} />
         <Route path="/public-library" element={<PublicLibrary />} />
+        <Route path="/sighting/:id" element={<ContributionDetailView />} />
 
         {/* ── Universal Routes ── */}
         <Route
