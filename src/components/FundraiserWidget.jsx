@@ -16,11 +16,20 @@ export default function FundraiserWidget() {
 
   return (
     <div className="flex flex-col items-center justify-center w-full py-8">
-      <div
-        ref={containerRef}
-        className="gfm-embed w-full max-w-2xl"
-        data-url="https://www.gofundme.com/f/help-us-build-a-better-website-and-reach-larger-audiences/widget/medium"
-      />
+      <a
+        href="https://www.gofundme.com/f/help-us-build-a-better-website-and-reach-larger-audiences"
+        target="_blank"
+        rel="noopener noreferrer"
+        style={{ display: "block", width: "100%", maxWidth: "672px", textDecoration: "none", cursor: "pointer" }}
+        title="Donate on GoFundMe"
+      >
+        <div
+          ref={containerRef}
+          className="gfm-embed w-full max-w-2xl"
+          data-url="https://www.gofundme.com/f/help-us-build-a-better-website-and-reach-larger-audiences/widget/medium?sharesheet=undefined&attribution_id=sl:9958843c-39f1-4739-9411-a9afed0a8886"
+          style={{ pointerEvents: "none" }}
+        />
+      </a>
     </div>
   );
 }
