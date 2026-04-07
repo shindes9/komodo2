@@ -25,6 +25,7 @@ import CommunityLibrary from "./pages/CommunityLibrary";
 import ChairmanLibrary from "./pages/ChairmanLibrary";
 import StudentDetail from "./pages/StudentDetail";
 import MyCanvas from "./pages/MyCanvas";
+import LandingPage from "./pages/LandingPage";
 import NotFound from "./pages/NotFound";
 import "./App.css";
 
@@ -48,7 +49,8 @@ export default function App() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/" element={<AuthPage />} />
+        <Route path="/" element={<LandingPage />} />
+        <Route path="/auth" element={<AuthPage />} />
         <Route path="/library" element={<PublicLibrary />} />
         <Route path="/public-library" element={<PublicLibrary />} />
 

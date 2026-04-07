@@ -1,3 +1,33 @@
+/* ── Design System Tokens ── */
+:root {
+  --color-forest-900: #1b4332;
+  --color-forest-700: #2E7D32;
+  --color-forest-500: #43A047;
+  --color-forest-300: #66BB6A;
+  --color-forest-100: #e8f5e9;
+  --color-forest-50: #f4f8f4;
+
+  --color-text-primary: #2D3436;
+  --color-text-secondary: #636E72;
+  --color-text-muted: #B2BEC3;
+
+  --color-border: #DFE6E9;
+  --color-surface: #FFFFFF;
+  --color-background: #f0f4f0;
+
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 24px;
+
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.06);
+  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.08);
+  --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.1);
+
+  --transition-fast: 150ms ease;
+  --transition-normal: 200ms ease;
+}
+
 * {
   margin: 0;
   padding: 0;
