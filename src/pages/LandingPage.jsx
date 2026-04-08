@@ -220,30 +220,48 @@ export default function LandingPage() {
           </div>
 
           <div className="landing-impact-cards">
-            <div className="landing-impact-card">
+            <a
+              href="https://www.gofundme.com/f/help-us-build-a-better-website-and-reach-larger-audiences"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="landing-impact-card"
+              style={{ textDecoration: "none", color: "inherit", cursor: "pointer" }}
+            >
               <div className="landing-impact-icon">&#x1F331;</div>
               <h3>Platform Growth</h3>
               <p>
                 Fund development of new features, quizzes, and educational
                 content for Indonesian schools.
               </p>
-            </div>
-            <div className="landing-impact-card">
+            </a>
+            <a
+              href="https://www.gofundme.com/f/help-us-build-a-better-website-and-reach-larger-audiences"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="landing-impact-card"
+              style={{ textDecoration: "none", color: "inherit", cursor: "pointer" }}
+            >
               <div className="landing-impact-icon">&#x1F98E;</div>
               <h3>Species Coverage</h3>
               <p>
                 Expand our encyclopedia to cover 50+ species with detailed
                 conservation data and tracking.
               </p>
-            </div>
-            <div className="landing-impact-card">
+            </a>
+            <a
+              href="https://www.gofundme.com/f/help-us-build-a-better-website-and-reach-larger-audiences"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="landing-impact-card"
+              style={{ textDecoration: "none", color: "inherit", cursor: "pointer" }}
+            >
               <div className="landing-impact-icon">&#x1F3EB;</div>
               <h3>School Outreach</h3>
               <p>
                 Bring Komodo Hub to more schools across the Indonesian
                 archipelago, free of charge.
               </p>
-            </div>
+            </a>
           </div>
 
           <div className="landing-fundraiser-widget">

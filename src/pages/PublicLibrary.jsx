@@ -1001,8 +1001,11 @@ export default function PublicLibrary() {
                   { icon: "🦎", title: "Species Coverage", desc: "Expand our database to cover more endangered species." },
                   { icon: "🏫", title: "School Outreach", desc: "Help us onboard more schools across the Indonesian archipelago." },
                 ].map((card) => (
-                  <div
+                  <a
                     key={card.title}
+                    href="https://www.gofundme.com/f/help-us-build-a-better-website-and-reach-larger-audiences"
+                    target="_blank"
+                    rel="noopener noreferrer"
                     style={{
                       flex: "1 1 200px",
                       background: "rgba(52, 211, 153, 0.08)",
@@ -1010,12 +1013,18 @@ export default function PublicLibrary() {
                       borderRadius: "12px",
                       padding: "1.25rem",
                       textAlign: "center",
+                      textDecoration: "none",
+                      color: "inherit",
+                      cursor: "pointer",
+                      transition: "transform 0.2s ease, box-shadow 0.2s ease",
                     }}
+                    onMouseEnter={(e) => { e.currentTarget.style.transform = "translateY(-3px)"; e.currentTarget.style.boxShadow = "0 6px 20px rgba(52,211,153,0.2)"; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.transform = "translateY(0)"; e.currentTarget.style.boxShadow = "none"; }}
                   >
                     <div style={{ fontSize: "2rem", marginBottom: "0.5rem" }}>{card.icon}</div>
                     <h3 style={{ margin: "0 0 0.4rem", fontSize: "1rem", fontWeight: 600 }}>{card.title}</h3>
                     <p style={{ margin: 0, fontSize: "0.875rem", color: "#6b7280" }}>{card.desc}</p>
-                  </div>
+                  </a>
                 ))}
               </div>
 
