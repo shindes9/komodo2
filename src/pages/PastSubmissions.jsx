@@ -13,13 +13,6 @@ import {
 import { markFeedbackNotificationRead } from "../utils/notifications";
 import "./PastSubmissions.css";
 
-/**
- * PastSubmissions — Student view of all submitted work.
- *
- * Shows every report the student has sent, with status badges.
- * If status === "reviewed", displays a "Teacher Feedback" badge.
- * Clicking a report opens a modal showing original work + teacher feedback.
- */
 export default function PastSubmissions() {
   const { user, userData } = useAuth();
   const navigate = useNavigate();
@@ -176,7 +169,7 @@ export default function PastSubmissions() {
               className="ps-item"
               onClick={() => {
                 setSelectedReport(r);
-                // Read-trigger: mark feedback notifications for this submission as read
+                
                 markFeedbackNotificationRead(user?.uid, r.id);
               }}
               style={{ cursor: "pointer" }}
@@ -209,7 +202,7 @@ export default function PastSubmissions() {
                 <img src={r.photoURL} alt="Submission" className="ps-item-thumb" />
               )}
 
-              {/* Visibility badges */}
+              
               <div style={{ display: "flex", gap: "6px", marginTop: "8px" }}>
                 {r.isVisibleInSchool && (
                   <span style={{ fontSize: "11px", background: "#e8f5e9", color: "#2E7D32", padding: "2px 8px", borderRadius: "10px", fontWeight: 600 }}>
@@ -227,7 +220,7 @@ export default function PastSubmissions() {
         </div>
       )}
 
-      {/* ── Feedback Modal ── */}
+      
       {selectedReport && (
         <div className="ps-modal-overlay" onClick={() => setSelectedReport(null)}>
           <div className="ps-modal" onClick={(e) => e.stopPropagation()}>
@@ -263,11 +256,11 @@ export default function PastSubmissions() {
               <p>{selectedReport.description}</p>
             </div>
 
-            {/* Teacher Feedback Section */}
+            
             <div className="ps-modal-feedback">
               <h4>💬 Teacher Feedback</h4>
 
-              {/* Feedback array entries */}
+              
               {selectedReport.feedback && selectedReport.feedback.length > 0 ? (
                 <div className="ps-feedback-list">
                   {selectedReport.feedback.map((fb, idx) => (

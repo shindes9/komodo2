@@ -53,8 +53,7 @@ export default function AuthPage() {
 
   const rememberedEmailKey = "komodoHub.rememberedEmail";
 
-  /* Access code required for: student, teacher, member */
-  const needsSchoolAccessCode = orgType === "student" || orgType === "teacher";
+    const needsSchoolAccessCode = orgType === "student" || orgType === "teacher";
   const needsCommunityInviteCode = orgType === "member";
   const needsAccessCode = needsSchoolAccessCode || needsCommunityInviteCode;
 
@@ -248,8 +247,7 @@ export default function AuthPage() {
     }
   };
 
-  /* ── Validate School Access Code ── */
-  const validateSchoolAccessCode = async () => {
+    const validateSchoolAccessCode = async () => {
     const codeQ = query(
       collection(db, "accessCodes"),
       where("code", "==", accessCode.trim().toUpperCase())
@@ -267,8 +265,7 @@ export default function AuthPage() {
     return { valid: true, schoolId };
   };
 
-  /* ── Validate Community Invite Code ── */
-  const validateCommunityInviteCode = async () => {
+    const validateCommunityInviteCode = async () => {
     const codeQ = query(
       collection(db, "communityInviteCodes"),
       where("code", "==", accessCode.trim().toUpperCase())
@@ -286,8 +283,7 @@ export default function AuthPage() {
     return { valid: true, orgId };
   };
 
-  /* ── Register ── */
-  const register = async () => {
+    const register = async () => {
     clearFeedback();
     if (!validateForm()) return;
     setLoading(true);
@@ -300,7 +296,7 @@ export default function AuthPage() {
 
       const defaultDisplayName = cleanEmail.split("@")[0];
       
-      // Sync immediately with Firebase Auth
+      
       await updateProfile(credential.user, { 
         displayName: defaultDisplayName,
       });
@@ -315,8 +311,7 @@ export default function AuthPage() {
         createdAt: serverTimestamp(),
       };
 
-      /* ── School path: student / teacher ── */
-      if (needsSchoolAccessCode) {
+            if (needsSchoolAccessCode) {
         const { valid, schoolId } = await validateSchoolAccessCode();
         if (!valid) {
           try { await deleteUser(credential.user); } catch (e) { console.error(e); }
@@ -326,8 +321,7 @@ export default function AuthPage() {
         if (schoolId) userData.schoolId = schoolId;
       }
 
-      /* ── Community path: member (needs invite code) ── */
-      if (needsCommunityInviteCode) {
+            if (needsCommunityInviteCode) {
         const { valid, orgId } = await validateCommunityInviteCode();
         if (!valid) {
           try { await deleteUser(credential.user); } catch (e) { console.error(e); }
@@ -337,12 +331,11 @@ export default function AuthPage() {
         if (orgId) userData.orgId = orgId;
       }
 
-      /* ── Community path: chairman (creates org) ── */
-      if (cleanRole === "chairman") {
-        // Create user first
+            if (cleanRole === "chairman") {
+        
         await setDoc(doc(db, "users", credential.user.uid), userData);
 
-        // Create organization
+        
         const orgRef = await addDoc(collection(db, "organizations"), {
           orgName: communityOrgName.trim(),
           orgType: "community",
@@ -350,7 +343,7 @@ export default function AuthPage() {
           createdAt: serverTimestamp(),
         });
 
-        // Link org to user
+        
         await updateDoc(doc(db, "users", credential.user.uid), {
           orgId: orgRef.id,
         });
@@ -364,9 +357,8 @@ export default function AuthPage() {
         return;
       }
 
-      /* ── Principal path: ATOMIC school creation at registration ── */
-      if (cleanRole === "principal") {
-        // 1. Create the school document first
+            if (cleanRole === "principal") {
+        
         const schoolRef = await addDoc(collection(db, "schools"), {
           schoolName: principalSchoolName.trim(),
           description: principalSchoolDesc.trim(),
@@ -374,7 +366,7 @@ export default function AuthPage() {
           createdAt: serverTimestamp(),
         });
 
-        // 2. Bind schoolId to user document
+        
         userData.schoolId = schoolRef.id;
         await setDoc(doc(db, "users", credential.user.uid), userData);
 
@@ -403,8 +395,7 @@ export default function AuthPage() {
     }
   };
 
-  /* ── Login ── */
-  const login = async () => {
+    const login = async () => {
     clearFeedback();
     if (!validateForm()) return;
     setLoading(true);
@@ -415,17 +406,17 @@ export default function AuthPage() {
       const cleanEmail = normalizeEmail(email);
       const selectedRole = String(orgType).trim().toLowerCase();
 
-      // ── Step 1: Authenticate credentials ──
+      
       credential = await signInWithEmailAndPassword(auth, cleanEmail, password);
 
       persistRememberedEmail(cleanEmail);
 
-      // ── Step 2: Fetch DB profile ──
+      
       const userRef = doc(db, "users", credential.user.uid);
       const userSnap = await getDoc(userRef);
 
-      // ── Step 3: ROLE GUARD — compare DB role vs UI-selected role ──
-      // If the user's actual role doesn't match what they selected, deny access immediately.
+      
+      
       if (userSnap.exists()) {
         const dbRole = (userSnap.data().role || "").trim().toLowerCase();
         if (dbRole && dbRole !== selectedRole) {
@@ -440,23 +431,23 @@ export default function AuthPage() {
         }
       }
 
-      // ── Step 4: Resolve role & orgIds from DB ──
+      
       let role = selectedRole;
       let userSchoolId = null;
 
       if (userSnap.exists()) {
         const userData = userSnap.data();
-        // Use the DB role (already confirmed to match selectedRole above)
+        
         role = userData.role || role;
         userSchoolId = userData.schoolId || null;
       }
 
-      // ── Step 5: Access Code Validation (school roles) ──
+      
       if (needsSchoolAccessCode) {
         const { valid, schoolId } = await validateSchoolAccessCode();
         if (!valid) { setLoading(false); return; }
 
-        // Block if the code belongs to a different school than the one registered
+        
         if (userSchoolId && schoolId && userSchoolId !== schoolId) {
           setAccessCodeError("This access code does not match your registered school.");
           showMessage("Access code does not match your school.", "error");
@@ -464,13 +455,13 @@ export default function AuthPage() {
           return;
         }
 
-        // Assign schoolId if profile is missing it (legacy user migration)
+        
         if (!userSchoolId && schoolId && userSnap.exists()) {
           await updateDoc(userRef, { schoolId });
         }
       }
 
-      // ── Step 6: Community Invite Code Validation (member role) ──
+      
       if (needsCommunityInviteCode) {
         const { valid, orgId } = await validateCommunityInviteCode();
         if (!valid) { setLoading(false); return; }
@@ -481,17 +472,17 @@ export default function AuthPage() {
         }
       }
 
-      // ── Step 7: Route to correct dashboard ──
+      
       setPassword("");
       setConfirmPassword("");
 
       if (routeByType(role)) return;
       showMessage("Logged in successfully.", "success");
     } catch (err) {
-      // If the error occurred after sign-in but before role check completes,
-      // make sure user is not left in a partial auth state.
+      
+      
       if (credential?.user) {
-        try { await signOut(auth); } catch (_) { /* ignore */ }
+        try { await signOut(auth); } catch (_) {  }
       }
       const friendlyMessage = mapFirebaseError(err, "login");
       showMessage(friendlyMessage, "error");
@@ -500,8 +491,7 @@ export default function AuthPage() {
     }
   };
 
-  /* ── Registration path grouping for UI ── */
-  const isSchoolRole = orgType === "student" || orgType === "teacher" || orgType === "principal";
+    const isSchoolRole = orgType === "student" || orgType === "teacher" || orgType === "principal";
   const isCommunityRole = orgType === "chairman" || orgType === "member";
 
   return (
@@ -616,7 +606,7 @@ export default function AuthPage() {
           </>
         )}
 
-        {/* ── Dual Registration: Account Type Selector ── */}
+        
         <div className="auth-select-group">
           <label className="auth-select-label">Account type</label>
 
@@ -670,7 +660,7 @@ export default function AuthPage() {
           {orgTypeError && <div className="auth-error-text">{orgTypeError}</div>}
         </div>
 
-        {/* ── Chairman: Org Name Field ── */}
+        
         {mode === "register" && orgType === "chairman" && (
           <div className="auth-org-name-group">
             <label className="auth-select-label">Organization Name *</label>
@@ -687,7 +677,7 @@ export default function AuthPage() {
           </div>
         )}
 
-        {/* ── Principal: School Name + Description Fields ── */}
+        
         {mode === "register" && orgType === "principal" && (
           <div className="auth-org-name-group">
             <label className="auth-select-label">School Name *</label>
@@ -713,7 +703,7 @@ export default function AuthPage() {
           </div>
         )}
 
-        {/* ── Access / Invite Code ── */}
+        
         {needsSchoolAccessCode && (
           <div className="auth-access-code-group">
             <label className="auth-select-label">School Access Code *</label>

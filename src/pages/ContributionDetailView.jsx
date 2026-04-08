@@ -15,7 +15,7 @@ export default function ContributionDetailView() {
   useEffect(() => {
     document.title = "Contribution Detail - Komodo Hub";
     fetchContribution();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    
   }, [id]);
 
   const fetchContribution = async () => {
@@ -31,7 +31,7 @@ export default function ContributionDetailView() {
 
       const data = docSnap.data();
 
-      // Security check: Only display if published
+      
       if (!data.isVisibleInPublic) {
         setError("This contribution is private or pending review.");
         setLoading(false);
@@ -40,19 +40,19 @@ export default function ContributionDetailView() {
 
       setContribution(data);
 
-      // Fetch organization name
+      
       const orgType = data.organizationType || (data.schoolId ? "school" : data.orgId ? "community" : "school");
       
       if (orgType === "school" && data.schoolId) {
         try {
           const schoolDoc = await getDoc(doc(db, "schools", data.schoolId));
           if (schoolDoc.exists()) setOrgName(schoolDoc.data().schoolName);
-        } catch { /* ignore error */ }
+        } catch {  }
       } else if (orgType === "community" && data.orgId) {
         try {
           const orgDoc = await getDoc(doc(db, "organizations", data.orgId));
           if (orgDoc.exists()) setOrgName(orgDoc.data().orgName);
-        } catch { /* ignore error */ }
+        } catch {  }
       }
 
       setLoading(false);
@@ -113,7 +113,7 @@ export default function ContributionDetailView() {
               <span className="cdv-meta-value">{orgName || "Unknown Organization"}</span>
             </div>
             
-            {/* Respect privacy - don't show student details */}
+            
             {isCommunity && contribution.contributorName && (
               <div className="cdv-meta-item">
                 <span className="cdv-meta-label">Contributor</span>

@@ -15,15 +15,6 @@ import {
 import { createNotification } from "../utils/notifications";
 import "./SchoolLibrary.css";
 
-/**
- * CommunityLibrary — orgId-scoped library for Community Organizations.
- *
- * INTERNAL VIEW (chairman / member):
- *   Shows all contributions where orgId === user's orgId.
- *   Chairman can publish to the Public Library (gatekeeper).
- *
- * This mirrors SchoolLibrary but is scoped to orgId instead of schoolId.
- */
 export default function CommunityLibrary() {
   const { user, userData, role, orgId } = useAuth();
   const navigate = useNavigate();
@@ -201,7 +192,7 @@ export default function CommunityLibrary() {
 
 
 
-                {/* Feedback thread */}
+                
                 {selectedItem.feedback && selectedItem.feedback.length > 0 && (
                   <div className="sl-feedback-section">
                     <h4 className="sl-feedback-title">

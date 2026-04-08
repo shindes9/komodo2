@@ -14,7 +14,7 @@ import {
 } from "firebase/firestore";
 import "./PrincipalDashboard.css";
 
-// The 3 defined conservation programs in Komodo Hub
+
 const PROGRAMS = [
   { key: "komodo_dragon", label: "Komodo Dragon Conservation" },
   { key: "sumatran_tiger", label: "Sumatran Tiger Watch" },
@@ -24,7 +24,7 @@ const PROGRAMS = [
 export default function PrincipalDashboard() {
   const { user, userData, schoolId: authSchoolId } = useAuth();
 
-  // ── School profile ──────────────────────────────────────────────
+  
   const [schoolId, setSchoolId] = useState(authSchoolId || null);
   const [schoolName, setSchoolName] = useState("");
   const [schoolDesc, setSchoolDesc] = useState("");
@@ -56,14 +56,14 @@ export default function PrincipalDashboard() {
     weekday: "long", year: "numeric", month: "long", day: "numeric",
   });
 
-  // ────────────────────────────────────────────────────────────────
-  // Step 1: Load school profile — prefer authSchoolId from context
-  // to skip the extra schools query and prevent the "refresh bug".
-  // ────────────────────────────────────────────────────────────────
+  
+  
+  
+  
   useEffect(() => {
     if (!user) return;
 
-    // If context already gave us a schoolId, still fetch school name/desc
+    
     const fetchSchoolByPrincipal = async () => {
       try {
         const q = query(collection(db, "schools"), where("principalId", "==", user.uid));
@@ -113,7 +113,7 @@ export default function PrincipalDashboard() {
       }, (err) => console.error("Users snapshot error:", err))
     );
 
-    // ── 2b. Contributions (submissions count + library) ─────────
+    
     const contribQ = query(collection(db, "contributions"), where("schoolId", "==", schoolId));
     unsubs.push(
       onSnapshot(contribQ, (snap) => {
@@ -133,27 +133,27 @@ export default function PrincipalDashboard() {
       }, (err) => console.error("Contributions snapshot error:", err))
     );
 
-    // ── 2c. Enrollments by program (real numbers) ───────────────
-    // Query ALL enrollments, then filter client-side to ensure we capture legacy data
-    // lacking the schoolId field, matching only against our known students.
+    
+    
+    
     const enrollQ = query(collection(db, "enrollments"));
     unsubs.push(
       onSnapshot(enrollQ, async (snap) => {
         const allEnrollments = snap.docs.map((d) => d.data());
 
-        // Filter to only enrollments belonging to our students or explicitly tagged with our schoolId
+        
         const schoolEnrollments = allEnrollments.filter((e) => {
           const uid = e.userId || e.studentId;
           return e.schoolId === schoolId || currentStudentIds.includes(uid);
         });
 
-        // Collect all unique studentIds across programs for this school
+        
         const studentIds = [...new Set(schoolEnrollments.map((e) => e.userId || e.studentId).filter(Boolean))];
 
-        // Fetch user names for IDs we have
+        
         const nameMap = {};
         if (studentIds.length > 0) {
-          // Firestore "in" query max 30 at a time
+          
           const chunks = [];
           for (let i = 0; i < studentIds.length; i += 30) chunks.push(studentIds.slice(i, i + 30));
           for (const chunk of chunks) {
@@ -164,7 +164,7 @@ export default function PrincipalDashboard() {
                 const ud = d.data();
                 nameMap[d.id] = ud.displayName || ud.email || d.id;
               });
-            } catch { /* skip */ }
+            } catch {  }
           }
         }
 
@@ -186,7 +186,7 @@ export default function PrincipalDashboard() {
       })
     );
 
-    // ── 2d. Access codes ─────────────────────────────────────────
+    
     const codesQ = query(collection(db, "accessCodes"), where("createdBy", "==", user.uid));
     unsubs.push(
       onSnapshot(codesQ, (snap) => {
@@ -292,18 +292,18 @@ export default function PrincipalDashboard() {
 
   const maxEnrollment = Math.max(1, ...programStats.map((p) => p.count));
 
-  // ────────────────────────────────────────────────────────────────
-  // Render
-  // ────────────────────────────────────────────────────────────────
+  
+  
+  
   return (
     <div className="principal-dashboard">
-      {/* Welcome */}
+      
       <div className="principal-welcome">
         <h2>Welcome back, {userData?.displayName || user?.email}</h2>
         <p className="principal-date">{today}</p>
       </div>
 
-      {/* ── Stats Bar (real-time) ── */}
+      
       <div className="principal-stats">
         <div className="principal-stat-card">
           <div className="stat-icon">👨‍🏫</div>
@@ -327,7 +327,7 @@ export default function PrincipalDashboard() {
         </div>
       </div>
 
-      {/* ── School Profile ── */}
+      
       <div className="principal-section">
         <h3>School Profile</h3>
         {loadingSchool ? (
@@ -358,7 +358,7 @@ export default function PrincipalDashboard() {
           </div>
         )}
 
-        {/* Access Codes */}
+        
         <div className="access-code-section">
           <h4>Student & Teacher Access Code</h4>
           <p className="access-code-desc">Students and teachers use this code to join your school.</p>
@@ -395,7 +395,7 @@ export default function PrincipalDashboard() {
         </div>
       </div>
 
-      {/* ── Teachers Table ── */}
+      
       <div className="principal-section">
         <h3>School Teachers</h3>
         {teachers.length === 0 ? (
@@ -414,7 +414,7 @@ export default function PrincipalDashboard() {
         )}
       </div>
 
-      {/* ── Program Enrollment Analytics (Real Data) ── */}
+      
       <div className="principal-section">
         <h3>📊 Program Enrollment Analytics</h3>
         <p className="section-desc">
@@ -447,7 +447,7 @@ export default function PrincipalDashboard() {
         )}
       </div>
 
-      {/* ── Library / Submissions ── */}
+      
       <div className="principal-section">
         <h3>School Library (Student Submissions)</h3>
         <p className="section-desc">Toggle visibility to control public access.</p>
@@ -476,7 +476,7 @@ export default function PrincipalDashboard() {
         )}
       </div>
 
-      {/* ── Quick Summary ── */}
+      
       <div className="principal-section">
         <h3>Quick Summary</h3>
         <div className="summary-grid">
@@ -499,7 +499,7 @@ export default function PrincipalDashboard() {
         </div>
       </div>
 
-      {/* ── Drill-Down Modal ── */}
+      
       {drillProgram && (
         <div className="ps-modal-overlay" onClick={() => setDrillProgram(null)}>
           <div className="ps-modal" onClick={(e) => e.stopPropagation()}

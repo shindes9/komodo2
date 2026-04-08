@@ -92,7 +92,7 @@ export default function StudentProfile() {
           enrollSnap.docs.map((d) => ({ id: d.id, ...d.data() }))
         );
 
-        // Fetch contributions (with teacher feedback)
+        
         const contribQ = query(
           collection(db, "contributions"),
           where("studentId", "==", user.uid)
@@ -168,7 +168,7 @@ export default function StudentProfile() {
         )}
       </div>
 
-      {/* Contribution Stats */}
+      
       <div className="profile-card">
         <h3>My Canvas Summary</h3>
         <div style={{ display: "flex", gap: "16px", flexWrap: "wrap", marginBottom: "16px" }}>
@@ -220,7 +220,7 @@ export default function StudentProfile() {
                 <p className="contribution-desc">{c.description}</p>
                 {c.date && <span className="contribution-date">{c.date}</span>}
 
-                {/* Visibility badges */}
+                
                 <div style={{ display: "flex", gap: "6px", marginTop: "6px" }}>
                   {c.isVisibleToSchool && (
                     <span style={{ fontSize: "11px", background: "#e8f5e9", color: "#2E7D32", padding: "2px 8px", borderRadius: "10px", fontWeight: 600 }}>
@@ -234,7 +234,7 @@ export default function StudentProfile() {
                   )}
                 </div>
 
-                {/* Teacher Feedback Thread */}
+                
                 {c.feedback && c.feedback.length > 0 && (
                   <div className="contribution-feedback-section">
                     <strong style={{ color: "#2E7D32", fontSize: "13px" }}>Teacher Feedback:</strong>
@@ -254,7 +254,7 @@ export default function StudentProfile() {
                   </div>
                 )}
 
-                {/* Legacy teacherFeedback field */}
+                
                 {!c.feedback?.length && c.teacherFeedback && (
                   <div className="contribution-feedback-section">
                     <strong style={{ color: "#2E7D32", fontSize: "13px" }}>Teacher Feedback:</strong>

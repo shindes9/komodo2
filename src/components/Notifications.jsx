@@ -17,11 +17,11 @@ export default function Notifications() {
   const { user, schoolId, orgId } = useAuth();
   const [notifications, setNotifications] = useState([]);
   const [open, setOpen] = useState(false);
-  // Optimistic UI: local override for unread count while batch write is in flight
+  
   const [optimisticAllRead, setOptimisticAllRead] = useState(false);
   const ref = useRef(null);
 
-  // ── Real-time listener: only recipient's own notifications ──────
+  
   useEffect(() => {
     if (!user) return;
 
@@ -34,14 +34,14 @@ export default function Notifications() {
     const unsub = onSnapshot(q, (snapshot) => {
       const data = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
       setNotifications(data);
-      // Reset optimistic flag whenever server data arrives
+      
       setOptimisticAllRead(false);
     });
 
     return () => unsub();
   }, [user]);
 
-  // ── Close dropdown on outside click ────────────────────────────
+  
   useEffect(() => {
     const handleClickOutside = (e) => {
       if (ref.current && !ref.current.contains(e.target)) setOpen(false);
@@ -50,15 +50,10 @@ export default function Notifications() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  /**
-   * Walled-garden check: count only unread notifications that belong
-   * to the user's own school/org (or notifications with no org, e.g. system).
-   * Uses `isRead` as the canonical field; falls back to `read` for legacy docs.
-   */
-  const isUnread = (n) => {
-    // Check both field names (new: isRead, legacy: read)
+    const isUnread = (n) => {
+    
     if (n.isRead === true || n.read === true) return false;
-    // Walled-garden isolation
+    
     if (schoolId && n.schoolId && n.schoolId !== schoolId) return false;
     if (orgId && n.orgId && n.orgId !== orgId) return false;
     return true;
@@ -68,7 +63,7 @@ export default function Notifications() {
     ? 0
     : notifications.filter(isUnread).length;
 
-  // ── Mark single notification read ──────────────────────────────
+  
   const markAsRead = async (notifId) => {
     try {
       await updateDoc(doc(db, "notifications", notifId), {
@@ -80,11 +75,11 @@ export default function Notifications() {
     }
   };
 
-  // ── Mark all read — optimistic UI + atomic writeBatch ───────────
+  
   const handleMarkAllRead = async () => {
-    // Instant UI update (optimistic)
+    
     setOptimisticAllRead(true);
-    // Persist to Firestore in background (atomic batch)
+    
     await markAllNotificationsRead(user.uid);
   };
 
@@ -112,7 +107,7 @@ export default function Notifications() {
 
   return (
     <div className="notifications-wrapper" ref={ref}>
-      {/* Bell button with unread badge */}
+      
       <button
         className="notifications-bell"
         onClick={() => setOpen(!open)}
@@ -124,7 +119,7 @@ export default function Notifications() {
         )}
       </button>
 
-      {/* Dropdown panel */}
+      
       {open && (
         <div className="notifications-dropdown">
           <div className="notifications-header">

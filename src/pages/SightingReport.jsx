@@ -141,9 +141,9 @@ export default function SightingReport() {
 
       await addDoc(collection(db, "contributions"), contributionData);
 
-      // Legacy sightings collection dual-write removed to prevent split logic
+      
 
-      // Notify teachers OR chairman
+      
       if (schoolId) {
         const teacherQ = query(
           collection(db, "users"),
@@ -175,7 +175,7 @@ export default function SightingReport() {
         });
       }
 
-      // Redirect to My Canvas page after successful submit
+      
       const rolePrefix = userData?.role === "member" ? "/member" : "/student";
       navigate(`${rolePrefix}/profile`, {
         state: { successMessage: `${contributionType} submitted successfully! Your teacher will review it.` }
@@ -213,7 +213,7 @@ export default function SightingReport() {
           </div>
         )}
 
-        {/* Contribution type selector */}
+        
         <div className="contribution-type-selector">
           {getContributionTypes(userData?.role).map((ct) => (
             <button

@@ -22,7 +22,7 @@ export default function MyCanvas() {
   useEffect(() => {
     if (!user) return;
 
-    // Unified Snapshot Listener for all contributions exactly matching user UID
+    
     const q = query(
       collection(db, "contributions"),
       where("studentId", "==", user.uid),
@@ -76,7 +76,7 @@ export default function MyCanvas() {
     });
   };
 
-  // Timeline Progress Nodes
+  
   const renderTimeline = () => {
     if (contributions.length === 0) return null;
 
@@ -224,7 +224,7 @@ export default function MyCanvas() {
         </div>
       </div>
 
-      {/* ── Submission Detail & Feedback Modal ── */}
+      
       {selectedSubmission && (
         <div 
           className="canvas-modal-overlay"

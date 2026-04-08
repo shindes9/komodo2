@@ -6,17 +6,16 @@ import { collection, addDoc, serverTimestamp, doc, getDoc } from "firebase/fires
 import { SPECIES_DATA } from "../data/speciesData";
 import "./SpeciesQuiz.css";
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Helpers
-// ─────────────────────────────────────────────────────────────────────────────
 
-/** Pick `n` unique items from an array, excluding `excludeIndex`. */
+
+
+
 function pickDistractors(all, excludeIdx, count) {
   const pool = all
     .map((s, i) => ({ name: s.commonName, i }))
     .filter(({ i }) => i !== excludeIdx);
 
-  // Fisher-Yates shuffle the pool
+  
   for (let i = pool.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
     [pool[i], pool[j]] = [pool[j], pool[i]];
@@ -24,7 +23,6 @@ function pickDistractors(all, excludeIdx, count) {
   return pool.slice(0, count).map(({ name }) => name);
 }
 
-/** Shuffle an array in-place using Fisher-Yates. Returns a new array. */
 function shuffled(arr) {
   const a = [...arr];
   for (let i = a.length - 1; i > 0; i--) {
@@ -34,9 +32,8 @@ function shuffled(arr) {
   return a;
 }
 
-/** Build the full quiz sequence once: randomised order + 3-option sets. */
 function buildQuiz(species) {
-  const order = shuffled(species.map((_, i) => i)); // randomised species order
+  const order = shuffled(species.map((_, i) => i)); 
   return order.map((realIdx) => {
     const correct = species[realIdx].commonName;
     const distractors = pickDistractors(species, realIdx, 2);
@@ -49,13 +46,13 @@ function buildQuiz(species) {
   });
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Quiz states
-// ─────────────────────────────────────────────────────────────────────────────
+
+
+
 const STATE = {
   READY: "ready",
   QUESTION: "question",
-  FEEDBACK: "feedback", // brief green/red flash
+  FEEDBACK: "feedback", 
   RESULTS: "results",
   SUBMITTING: "submitting",
   SUBMITTED: "submitted",
@@ -65,17 +62,17 @@ export default function SpeciesQuiz() {
   const { user, userData, schoolId } = useAuth();
   const navigate = useNavigate();
 
-  // Quiz structure (built once on mount)
+  
   const [quiz, setQuiz] = useState([]);
   const [currentIdx, setCurrentIdx] = useState(0);
   const [score, setScore] = useState(0);
   const [state, setState] = useState(STATE.READY);
 
-  // Per-question state
-  const [chosenAnswer, setChosenAnswer] = useState(null); // what the student clicked
+  
+  const [chosenAnswer, setChosenAnswer] = useState(null); 
   const [isCorrect, setIsCorrect] = useState(false);
 
-  // Submission
+  
   const [submitError, setSubmitError] = useState("");
 
   // Build quiz on mount
@@ -144,7 +141,7 @@ export default function SpeciesQuiz() {
     }
   };
 
-  // ── Grade helpers ──────────────────────────────────────────────────────────
+  
   const getPct = () => Math.round((score / totalQuestions) * 100);
 
   const getGrade = () => {
@@ -162,10 +159,10 @@ export default function SpeciesQuiz() {
     return "quiz-option-btn quiz-option-neutral";
   };
 
-  // ── Render ─────────────────────────────────────────────────────────────────
+  
   return (
     <div className="quiz-page">
-      {/* Back button — always visible */}
+      
       <button
         className="quiz-back-btn"
         onClick={() => navigate("/student")}
@@ -173,7 +170,7 @@ export default function SpeciesQuiz() {
         ← Back to Dashboard
       </button>
 
-      {/* ── READY SCREEN ── */}
+      
       {state === STATE.READY && (
         <div className="quiz-card quiz-card-center">
           <div className="quiz-hero-emoji">🦎</div>
@@ -194,10 +191,10 @@ export default function SpeciesQuiz() {
         </div>
       )}
 
-      {/* ── QUESTION / FEEDBACK SCREEN ── */}
+      
       {(state === STATE.QUESTION || state === STATE.FEEDBACK) && currentQ && (
         <div className="quiz-card">
-          {/* Progress bar */}
+          
           <div className="quiz-progress-bar-track">
             <div
               className="quiz-progress-bar-fill"
@@ -209,7 +206,7 @@ export default function SpeciesQuiz() {
             <span>Score: <strong>{score}</strong></span>
           </div>
 
-          {/* Species display */}
+          
           <div className="quiz-species-display">
             <div className="quiz-species-emoji">{currentQ.species.emoji}</div>
             <div className="quiz-species-info">
@@ -227,7 +224,7 @@ export default function SpeciesQuiz() {
 
           <p className="quiz-question-text">What is this species?</p>
 
-          {/* Answer buttons */}
+          
           <div className="quiz-options">
             {currentQ.options.map((option) => (
               <button
@@ -247,7 +244,7 @@ export default function SpeciesQuiz() {
             ))}
           </div>
 
-          {/* Feedback flash message */}
+          
           {state === STATE.FEEDBACK && (
             <div className={`quiz-feedback-bar ${isCorrect ? "quiz-feedback-correct" : "quiz-feedback-wrong"}`}>
               {isCorrect
@@ -258,7 +255,7 @@ export default function SpeciesQuiz() {
         </div>
       )}
 
-      {/* ── RESULTS SCREEN ── */}
+      
       {(state === STATE.RESULTS || state === STATE.SUBMITTING || state === STATE.SUBMITTED) && (
         <div className="quiz-card quiz-card-center">
           <div className="quiz-results-emoji">🎓</div>
@@ -275,7 +272,7 @@ export default function SpeciesQuiz() {
             {getGrade().label}
           </p>
 
-          {/* Score breakdown bar */}
+          
           <div className="quiz-score-bar-track">
             <div
               className="quiz-score-bar-fill"

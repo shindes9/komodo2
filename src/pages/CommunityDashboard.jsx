@@ -17,8 +17,7 @@ import "./CommunityDashboard.css";
 export default function CommunityDashboard() {
   const { user, userData, orgId: authOrgId } = useAuth();
 
-  /* ── Org Profile State ── */
-  const [orgName, setOrgName] = useState("");
+    const [orgName, setOrgName] = useState("");
   const [orgBio, setOrgBio] = useState("");
   const [orgLocation, setOrgLocation] = useState("");
   const [orgLogo, setOrgLogo] = useState("");
@@ -45,8 +44,7 @@ export default function CommunityDashboard() {
     weekday: "long", year: "numeric", month: "long", day: "numeric",
   });
 
-  /* ── Load Organization Profile ── */
-  useEffect(() => {
+    useEffect(() => {
     if (!user) return;
 
     const fetchOrg = async () => {
@@ -138,8 +136,7 @@ export default function CommunityDashboard() {
     fetchAnalytics();
   }, [user, orgId]);
 
-  /* ── Save Org Profile ── */
-  const handleSaveOrg = async () => {
+    const handleSaveOrg = async () => {
     if (!orgName.trim()) return;
     setSavingOrg(true);
     setOrgMessage("");
@@ -177,8 +174,7 @@ export default function CommunityDashboard() {
     }
   };
 
-  /* ── Generate Invite Code ── */
-  const generateInviteCode = async () => {
+    const generateInviteCode = async () => {
     if (!orgId) {
       setOrgMessage("Please save an organization profile first.");
       return;
@@ -228,7 +224,7 @@ export default function CommunityDashboard() {
         <p className="comm-email">{userData?.displayName || user?.email}</p>
       </div>
 
-      {/* ── Stats ── */}
+      
       <div className="comm-stats">
         <div className="comm-stat-card">
           <div className="stat-icon">👥</div>
@@ -252,7 +248,7 @@ export default function CommunityDashboard() {
         </div>
       </div>
 
-      {/* ── Org Profile ── */}
+      
       <div className="comm-section">
         <h3>🏢 Organization Profile</h3>
 
@@ -315,7 +311,7 @@ export default function CommunityDashboard() {
           </div>
         )}
 
-        {/* ── Invite Code Section ── */}
+        
         <div className="invite-code-section">
           <h4>🔑 Member Invite Code</h4>
           <p className="invite-code-desc">
@@ -373,7 +369,7 @@ export default function CommunityDashboard() {
         </div>
       </div>
 
-      {/* ── Members List ── */}
+      
       <div className="comm-section">
         <h3>👥 Community Members</h3>
 
@@ -399,7 +395,7 @@ export default function CommunityDashboard() {
         )}
       </div>
 
-      {/* ── Analytics ── */}
+      
       <div className="comm-section">
         <h3>📊 Community Analytics</h3>
         <div className="comm-analytics-grid">

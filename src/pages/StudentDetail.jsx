@@ -3,7 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { db } from "../firebase";
 import { doc, getDoc, collection, query, where, orderBy, getDocs } from "firebase/firestore";
-import "./StudentProfile.css"; // Reuse the canvas styling
+import "./StudentProfile.css"; 
 
 export default function StudentDetail() {
   const { id } = useParams();
@@ -39,7 +39,7 @@ export default function StudentDetail() {
 
     const fetchCanvas = async () => {
       try {
-        // Sightings
+        
         const sightingsQ = query(
           collection(db, "sightings"),
           where("userId", "==", id),
@@ -48,7 +48,7 @@ export default function StudentDetail() {
         const sightingsSnap = await getDocs(sightingsQ);
         setSightings(sightingsSnap.docs.map((d) => ({ id: d.id, ...d.data() })));
 
-        // Enrollments
+        
         const enrollQ = query(
           collection(db, "enrollments"),
           where("userId", "==", id)
@@ -56,7 +56,7 @@ export default function StudentDetail() {
         const enrollSnap = await getDocs(enrollQ);
         setEnrollments(enrollSnap.docs.map((d) => ({ id: d.id, ...d.data() })));
 
-        // Contributions
+        
         const contribQ = query(
           collection(db, "contributions"),
           where("studentId", "==", id)
@@ -116,7 +116,7 @@ export default function StudentDetail() {
     return <div style={{ padding: "24px" }}>Student not found.</div>;
   }
 
-  // Walled garden boundary check
+  
   if (role !== "chairman" && studentData.schoolId !== schoolId) {
      return <div style={{ padding: "24px", color: "red" }}>Error: This student does not belong to your school.</div>;
   }

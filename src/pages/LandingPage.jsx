@@ -27,9 +27,7 @@ export default function LandingPage() {
 
   return (
     <div className="landing-page">
-      {/* ══════════════════════════════════════════════════
-          SECTION 1 — NAVIGATION
-          ══════════════════════════════════════════════════ */}
+      
       <nav className="landing-nav">
         <div className="landing-nav-inner">
           <div className="landing-nav-brand" onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}>
@@ -70,9 +68,7 @@ export default function LandingPage() {
         )}
       </nav>
 
-      {/* ══════════════════════════════════════════════════
-          SECTION 2 — HERO
-          ══════════════════════════════════════════════════ */}
+      
       <section id="home" className="landing-hero">
         <div className="landing-hero-inner">
           <h1 className="landing-hero-headline">
@@ -100,9 +96,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ══════════════════════════════════════════════════
-          SECTION 3 — WALLED GARDEN FEATURES
-          ══════════════════════════════════════════════════ */}
+      
       <section id="about" className="landing-features">
         <div className="landing-features-inner">
           <div className="landing-features-header">
@@ -113,7 +107,7 @@ export default function LandingPage() {
             </p>
           </div>
 
-          {/* Feature 1: School Privacy */}
+          
           <div className="landing-feature-row landing-feature-row-left">
             <div className="landing-feature-icon-col">
               <div className="landing-feature-icon">&#x1F3EB;</div>
@@ -129,7 +123,7 @@ export default function LandingPage() {
             </div>
           </div>
 
-          {/* Feature 2: Community Isolation */}
+          
           <div className="landing-feature-row landing-feature-row-right">
             <div className="landing-feature-text-col">
               <h3>Community Isolation</h3>
@@ -144,7 +138,7 @@ export default function LandingPage() {
             </div>
           </div>
 
-          {/* Feature 3: Student Protection */}
+          
           <div className="landing-feature-row landing-feature-row-left">
             <div className="landing-feature-icon-col">
               <div className="landing-feature-icon">&#x1F6E1;&#xFE0F;</div>
@@ -161,9 +155,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ══════════════════════════════════════════════════
-          SECTION 4 — SPECIES PREVIEW GRID
-          ══════════════════════════════════════════════════ */}
+      
       <section id="species" className="landing-species">
         <div className="landing-species-inner">
           <div className="landing-species-header">
@@ -206,9 +198,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ══════════════════════════════════════════════════
-          SECTION 5 — FUNDRAISER (Dark Theme)
-          ══════════════════════════════════════════════════ */}
+      
       <section id="support" className="landing-fundraiser">
         <div className="landing-fundraiser-inner">
           <div className="landing-fundraiser-header">
@@ -270,9 +260,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ══════════════════════════════════════════════════
-          SECTION 6 — FOOTER
-          ══════════════════════════════════════════════════ */}
+      
       <footer className="landing-footer">
         <div className="landing-footer-inner">
           <div className="landing-footer-links">

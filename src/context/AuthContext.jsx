@@ -15,11 +15,11 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Track the real-time user document listener so we can clean it up
+    
     let userDocUnsub = null;
 
     const authUnsub = onAuthStateChanged(auth, (firebaseUser) => {
-      // Clean up any previous user-document listener when auth state changes
+      
       if (userDocUnsub) {
         userDocUnsub();
         userDocUnsub = null;
@@ -38,25 +38,25 @@ export function AuthProvider({ children }) {
 
       setUser(firebaseUser);
 
-      // Use onSnapshot instead of getDoc so we:
-      // 1. Handle the registration race condition (doc may not exist yet when
-      //    onAuthStateChanged fires during sign-up — we simply wait until it appears)
-      // 2. Automatically pick up schoolId updates (e.g. principal sets up school)
+      
+      
+      
+      
       const userRef = doc(db, "users", firebaseUser.uid);
 
-      // Safety timeout: if the Firestore doc never appears (orphaned auth account),
-      // sign the user out after 5 seconds to avoid an infinite loading spinner.
+      
+      
       let orphanTimer = null;
 
       userDocUnsub = onSnapshot(
         userRef,
         async (userSnap) => {
           if (!userSnap.exists()) {
-            // Document is being created (registration race) — start orphan safety timer
+            
             if (!orphanTimer) {
               orphanTimer = setTimeout(async () => {
                 console.warn("AuthContext: user doc not found after 5s — signing out orphaned auth account.");
-                try { await signOut(auth); } catch (_) { /* ignore */ }
+                try { await signOut(auth); } catch (_) {  }
                 setUser(null);
                 setUserData(null);
                 setRole(null);
@@ -69,7 +69,7 @@ export function AuthProvider({ children }) {
             return;
           }
 
-          // Doc found — cancel the orphan timer if it was set
+          
           if (orphanTimer) {
             clearTimeout(orphanTimer);
             orphanTimer = null;
@@ -77,7 +77,7 @@ export function AuthProvider({ children }) {
 
           const data = userSnap.data();
           
-          // Dual-Wait: Ensure the document has actually populated with core attributes
+          
           if (!data.role) {
             return;
           }
@@ -90,7 +90,7 @@ export function AuthProvider({ children }) {
           setSchoolId(userSchoolId);
           setOrgId(userOrgId);
 
-          // Fetch class membership based on role
+          
           try {
             let fetchedClassIds = [];
             if (userRole === "student") {
@@ -156,8 +156,8 @@ export function AuthProvider({ children }) {
       classIds,
       loading,
       logout,
-      // Convenience shortcut: displayName resolves to Firestore displayName,
-      // falls back to Firebase Auth displayName, then email prefix.
+      
+      
       displayName: userData?.displayName || user?.displayName || user?.email?.split("@")[0] || null,
     }}>
       {children}

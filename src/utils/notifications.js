@@ -10,19 +10,6 @@ import {
   doc,
 } from "firebase/firestore";
 
-/**
- * Creates a notification document in Firestore for a given recipient.
- *
- * Schema:
- *   recipientId  : string  — UID of the recipient (required)
- *   senderId     : string  — UID of the sender (for read-trigger matching)
- *   message      : string  — human-readable notification text
- *   type         : string  — 'message' | 'feedback' | 'published' | 'system'
- *   isRead       : boolean — false by default (used by badge query)
- *   schoolId     : string? — Walled-garden isolation field
- *   orgId        : string? — Community isolation field
- *   createdAt    : Timestamp
- */
 export async function createNotification(
   recipientId,
   message,
@@ -35,8 +22,8 @@ export async function createNotification(
 ) {
   if (!recipientId) return;
 
-  // Walled-garden: never create cross-org notifications
-  // (callers are responsible for passing the correct schoolId/orgId)
+  
+  
   try {
     await addDoc(collection(db, "notifications"), {
       recipientId,
@@ -44,7 +31,7 @@ export async function createNotification(
       type,
       senderId,
       isRead: false,
-      // Legacy field kept for any existing queries still using 'read'
+      
       read: false,
       createdAt: serverTimestamp(),
       ...(schoolId ? { schoolId } : {}),
@@ -55,14 +42,10 @@ export async function createNotification(
   }
 }
 
-/**
- * Marks all unread notifications for a user as read in a single atomic batch.
- * Returns the number of documents updated.
- */
 export async function markAllNotificationsRead(userId) {
   if (!userId) return 0;
   try {
-    // Query all unread notifications for this user
+    
     const q = query(
       collection(db, "notifications"),
       where("recipientId", "==", userId),
@@ -71,7 +54,7 @@ export async function markAllNotificationsRead(userId) {
     const snap = await getDocs(q);
     if (snap.empty) return 0;
 
-    // Batch write — Firestore limit is 500 ops per batch
+    
     const batches = [];
     let batch = writeBatch(db);
     let opCount = 0;
@@ -89,7 +72,7 @@ export async function markAllNotificationsRead(userId) {
 
     await Promise.all(batches.map((b) => b.commit()));
 
-    // Also mark all actual messages for this user as read
+    
     try {
       const msgQ = query(
         collection(db, "messages"),
@@ -124,10 +107,6 @@ export async function markAllNotificationsRead(userId) {
   }
 }
 
-/**
- * Marks all unread MESSAGE notifications from a specific sender as read.
- * Call this when a user opens a conversation with `otherUserId`.
- */
 export async function markMessageNotificationsRead(recipientId, senderId) {
   if (!recipientId || !senderId) return;
   try {
@@ -147,7 +126,7 @@ export async function markMessageNotificationsRead(recipientId, senderId) {
     });
     await batch.commit();
 
-    // Also mark actual messages from this sender as read
+    
     try {
       const msgQ = query(
         collection(db, "messages"),
@@ -171,10 +150,6 @@ export async function markMessageNotificationsRead(recipientId, senderId) {
   }
 }
 
-/**
- * Marks feedback notifications for a specific contribution as read.
- * Call this when a student opens a submission's detail/feedback modal.
- */
 export async function markFeedbackNotificationRead(recipientId, contributionId) {
   if (!recipientId || !contributionId) return;
   try {

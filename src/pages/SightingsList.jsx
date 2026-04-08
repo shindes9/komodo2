@@ -14,12 +14,6 @@ import {
 import { createNotification } from "../utils/notifications";
 import "./SightingsList.css";
 
-/**
- * SightingsList — Teacher view of sighting reports
- * 
- * Uses feedback[] array model instead of single teacherNote.
- * Teachers can append multiple feedback entries per report.
- */
 export default function SightingsList() {
   const { user, userData } = useAuth();
   const [sightings, setSightings] = useState([]);
@@ -67,7 +61,7 @@ export default function SightingsList() {
         timestamp: Timestamp.now(),
       };
 
-      // Update sightings collection (legacy) with teacherNote + feedback array
+      
       const sightingRef = doc(db, "sightings", sightingId);
       await updateDoc(sightingRef, {
         status: "reviewed",
@@ -191,14 +185,14 @@ export default function SightingsList() {
                 <img src={s.photoURL} alt="Sighting" className="sl-report-photo" />
               )}
 
-              {/* Legacy teacher note */}
+              
               {s.teacherNote && (
                 <div className="sl-teacher-note">
                   <strong>Your Review:</strong> {s.teacherNote}
                 </div>
               )}
 
-              {/* Feedback thread */}
+              
               {s.feedback && s.feedback.length > 0 && (
                 <div className="sl-sighting-feedback-section">
                   <button
@@ -226,7 +220,7 @@ export default function SightingsList() {
                 </div>
               )}
 
-              {/* Review form */}
+              
               {s.status === "pending" && (
                 <>
                   {reviewingId === s.id ? (
@@ -263,7 +257,7 @@ export default function SightingsList() {
                 </>
               )}
 
-              {/* Add more feedback even after reviewed */}
+              
               {s.status === "reviewed" && reviewingId !== s.id && (
                 <button
                   className="sl-add-feedback-btn"

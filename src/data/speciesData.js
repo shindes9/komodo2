@@ -1,7 +1,3 @@
-/**
- * Species Encyclopedia Data — 15 Indonesian Endangered Species
- * Pre-populated into Firestore collection: species_data
- */
 export const SPECIES_DATA = [
   {
     commonName: "Sumatran Tiger",
@@ -215,13 +211,8 @@ export const SPECIES_DATA = [
   },
 ];
 
-/**
- * Digital Bookshelf Resources with tiered access
- * Categories: "book" | "research_paper" | "field_guide"
- * Access: "student_free" | "paid" | "global_paid"
- */
 export const BOOKSHELF_RESOURCES = [
-  // ── Free for Students ──
+  
   {
     title: "Introduction to Indonesian Wildlife Conservation",
     author: "Dr. Anwar Sulaiman",
@@ -270,7 +261,7 @@ export const BOOKSHELF_RESOURCES = [
     isbn: "978-602-XXXX-04",
     url: "#",
   },
-  // ── Paid / Purchase Required (non-student) ──
+  
   {
     title: "Community-Based Natural Resource Management in Indonesia",
     author: "Dr. Siti Nurhidayah",
@@ -297,7 +288,7 @@ export const BOOKSHELF_RESOURCES = [
     url: "#",
     price: "Rp 245,000",
   },
-  // ── Global Paid (all roles) — Advanced Research ──
+  
   {
     title: "Genomic Analysis of Javan Rhinoceros Population Viability",
     author: "Dr. Bambang Sayuti et al.",

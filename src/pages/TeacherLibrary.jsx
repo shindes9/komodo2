@@ -16,18 +16,6 @@ import {
 import { createNotification } from "../utils/notifications";
 import "./SchoolLibrary.css";
 
-/**
- * Teacher Library — Review Dashboard (Gatekeeper Workflow)
- *
- * Teachers review pending submissions, provide feedback, and control
- * visibility to School Library and Public Library independently.
- *
- * Actions:
- *   - "Save Feedback" → status: "reviewed", sends notification
- *   - "Publish to School Library" → isVisibleInSchool: true
- *   - "Publish to Public Showcase" → isVisibleInPublic: true, isPublic: true
- *   - "Archive" → reverts visibility flags
- */
 export default function TeacherLibrary() {
   const { user, userData, schoolId } = useAuth();
   const navigate = useNavigate();
@@ -118,7 +106,7 @@ export default function TeacherLibrary() {
         status: "reviewed",
       });
 
-      // Notify the student
+      
       if (selectedItem.studentId) {
         createNotification(
           selectedItem.studentId,
@@ -128,7 +116,7 @@ export default function TeacherLibrary() {
         );
       }
 
-      // Update local state
+      
       const updatedFeedback = [...(selectedItem.feedback || []), newFeedback];
       const updateObj = { status: "reviewed", feedback: updatedFeedback, teacherFeedback: feedbackText.trim() };
       setItems((prev) =>
@@ -180,10 +168,7 @@ export default function TeacherLibrary() {
     }
   };
 
-  /**
-   * Publish to Public Showcase — sets isVisibleInPublic: true, isPublic: true.
-   */
-  const handlePublishToPublic = async () => {
+    const handlePublishToPublic = async () => {
     if (!selectedItem) return;
     setPublishing(true);
 
@@ -230,10 +215,7 @@ export default function TeacherLibrary() {
     }
   };
 
-  /**
-   * Archive — reverts all visibility flags.
-   */
-  const handleArchive = async () => {
+    const handleArchive = async () => {
     if (!selectedItem) return;
     setPublishing(true);
 
@@ -440,9 +422,9 @@ export default function TeacherLibrary() {
                   </div>
                 )}
 
-                {/* ── GATEKEEPER ACTIONS ── */}
+                
                 <div className="sl-publish-section" style={{ display: "flex", gap: "10px", flexWrap: "wrap", marginTop: "16px", padding: "16px", background: "#f8faf8", borderRadius: "10px", border: "1px solid #e0e0e0" }}>
-                  {/* Publish to School Library */}
+                  
                   {selectedItem.isVisibleInSchool ? (
                     <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
                       <span style={{ fontSize: "13px", color: "#2E7D32", fontWeight: 600 }}>✅ In School Library</span>
@@ -467,7 +449,7 @@ export default function TeacherLibrary() {
                     </button>
                   )}
 
-                  {/* Publish to Public Showcase */}
+                  
                   {selectedItem.isVisibleInPublic ? (
                     <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
                       <span style={{ fontSize: "13px", color: "#1565c0", fontWeight: 600 }}>✅ In Public Showcase</span>
@@ -492,7 +474,7 @@ export default function TeacherLibrary() {
                     </button>
                   )}
 
-                  {/* Archive button — only show if published somewhere */}
+                  
                   {(selectedItem.isVisibleInSchool || selectedItem.isVisibleInPublic) && (
                     <button
                       onClick={handleArchive}
@@ -514,7 +496,7 @@ export default function TeacherLibrary() {
                   )}
                 </div>
 
-                {/* Feedback thread */}
+                
                 <div className="sl-feedback-section">
                   <h4 className="sl-feedback-title">
                     💬 Feedback & Notes ({selectedItem.feedback?.length || 0})
@@ -540,7 +522,7 @@ export default function TeacherLibrary() {
                     <p className="sl-no-feedback">No feedback yet. Be the first to leave a note.</p>
                   )}
 
-                  {/* Add feedback form - always available */}
+                  
                   <div className="sl-feedback-form">
                     <textarea
                       className="sl-feedback-textarea"

@@ -16,9 +16,6 @@ import { SPECIES_DATA, BOOKSHELF_RESOURCES } from "../data/speciesData";
 import FundraiserWidget from "../components/FundraiserWidget";
 import "./PublicLibrary.css";
 
-/* ================================================================
-   SEED: Educational articles for the library tab
-   ================================================================ */
 const seedArticles = [
   {
     title: "Introduction to Animal Conservation",
@@ -76,9 +73,6 @@ async function seedLibraryIfEmpty() {
   }
 }
 
-/* ================================================================
-   Seed species_data if empty
-   ================================================================ */
 async function seedSpeciesIfEmpty() {
   try {
     const snapshot = await getDocs(collection(db, "species_data"));
@@ -91,9 +85,6 @@ async function seedSpeciesIfEmpty() {
   }
 }
 
-/* ================================================================
-   Seed resources (digital bookshelf) if empty
-   ================================================================ */
 async function seedResourcesIfEmpty() {
   try {
     const snapshot = await getDocs(collection(db, "resources"));
@@ -106,9 +97,6 @@ async function seedResourcesIfEmpty() {
   }
 }
 
-/* ================================================================
-   IUCN badge colors
-   ================================================================ */
 const iucnColors = {
   CR: { bg: "#d32f2f", label: "Critically Endangered" },
   EN: { bg: "#e65100", label: "Endangered" },
@@ -117,17 +105,14 @@ const iucnColors = {
   LC: { bg: "#2e7d32", label: "Least Concern" },
 };
 
-/* ================================================================
-   MAIN COMPONENT
-   ================================================================ */
 const TAB_KEYS = ["species", "showcase", "bookshelf", "articles"];
 
 export default function PublicLibrary() {
   const navigate = useNavigate();
 
-  // useAuth may be null for public visitors — safe optional access
+  
   let authCtx = { user: null, role: null, schoolId: null, orgId: null, loading: false };
-  try { authCtx = useAuth() || authCtx; } catch { /* public visitor */ }
+  try { authCtx = useAuth() || authCtx; } catch {  }
   const { user, role, schoolId: userSchoolId, orgId: userOrgId, loading } = authCtx;
 
   const isStudent = role === "student";
@@ -149,28 +134,23 @@ export default function PublicLibrary() {
     );
   }
 
-  /* ── Tab state ── */
-  const [activeTab, setActiveTab] = useState("species");
+    const [activeTab, setActiveTab] = useState("species");
 
-  /* ── Species state ── */
-  const [speciesList, setSpeciesList] = useState([]);
+    const [speciesList, setSpeciesList] = useState([]);
   const [loadingSpecies, setLoadingSpecies] = useState(true);
   const [speciesSearch, setSpeciesSearch] = useState("");
-  const [speciesFilter, setSpeciesFilter] = useState("all"); // all | CR | EN | VU
+  const [speciesFilter, setSpeciesFilter] = useState("all"); 
   const [selectedSpecies, setSelectedSpecies] = useState(null);
 
-  /* ── Showcase state ── */
-  const [showcaseItems, setShowcaseItems] = useState([]);
+    const [showcaseItems, setShowcaseItems] = useState([]);
   const [loadingShowcase, setLoadingShowcase] = useState(true);
-  const [orgFilter, setOrgFilter] = useState("all"); // all | school | community
+  const [orgFilter, setOrgFilter] = useState("all"); 
 
-  /* ── Bookshelf state ── */
-  const [resources, setResources] = useState([]);
+    const [resources, setResources] = useState([]);
   const [loadingResources, setLoadingResources] = useState(true);
-  const [resourceFilter, setResourceFilter] = useState("all"); // all | book | research_paper | field_guide
+  const [resourceFilter, setResourceFilter] = useState("all"); 
 
-  /* ── Articles state ── */
-  const [articles, setArticles] = useState([]);
+    const [articles, setArticles] = useState([]);
   const [loadingArticles, setLoadingArticles] = useState(true);
   const [articleCategory, setArticleCategory] = useState("All");
   const [articleSearch, setArticleSearch] = useState("");
@@ -209,7 +189,7 @@ export default function PublicLibrary() {
 
   const loadShowcase = async () => {
     try {
-      // Only load contributions published to public by teacher (gatekeeper)
+      
       const publicQ = query(
         collection(db, "contributions"),
         where("isVisibleInPublic", "==", true)
@@ -222,10 +202,10 @@ export default function PublicLibrary() {
       for (const d of contribSnap.docs) {
         const data = d.data();
 
-        // Determine organization type
+        
         const orgType = data.organizationType || (data.schoolId ? "school" : data.orgId ? "community" : "school");
 
-        // Fetch school name if school
+        
         let orgName = data.communityName || "Unknown";
         if (data.schoolId && orgType === "school") {
           if (schoolCache[data.schoolId]) {
@@ -237,11 +217,11 @@ export default function PublicLibrary() {
                 orgName = schoolDoc.data().schoolName || "Unknown School";
                 schoolCache[data.schoolId] = orgName;
               }
-            } catch { /* keep default */ }
+            } catch {  }
           }
         }
 
-        // Fetch org name if community
+        
         if (data.orgId && orgType === "community") {
           if (orgCache[data.orgId]) {
             orgName = orgCache[data.orgId];
@@ -252,24 +232,11 @@ export default function PublicLibrary() {
                 orgName = orgDoc.data().orgName || "Unknown Organization";
                 orgCache[data.orgId] = orgName;
               }
-            } catch { /* keep default */ }
+            } catch {  }
           }
         }
 
-        /* ╔══════════════════════════════════════════════════════════╗
-           ║  PRIVACY FILTER (CRITICAL):                             ║
-           ║                                                          ║
-           ║  PUBLIC / CROSS-SCHOOL VISITORS:                         ║
-           ║    School entries: OMIT student names/emails/profiles.   ║
-           ║    Show only: content, school name, type, date.          ║
-           ║                                                          ║
-           ║  LOGGED-IN SAME-SCHOOL USERS:                            ║
-           ║    Can see full contributor details (student email).      ║
-           ║                                                          ║
-           ║  COMMUNITY:                                              ║
-           ║    Always show contributor name + public profile link.    ║
-           ╚══════════════════════════════════════════════════════════╝ */
-        const isSameSchool = isLoggedIn && userSchoolId && data.schoolId === userSchoolId;
+                const isSameSchool = isLoggedIn && userSchoolId && data.schoolId === userSchoolId;
 
         const item = {
           id: d.id,
@@ -284,14 +251,14 @@ export default function PublicLibrary() {
         };
 
         if (orgType === "community") {
-          // Community: always show contributor info + link to public profile
+          
           item.contributorName = data.contributorName || data.studentEmail || "Community Member";
           item.contributorProfileLink = data.studentId ? `/member/profile/${data.studentId}` : null;
         } else if (isSameSchool) {
-          // Same-school logged-in user: show student email
+          
           item.contributorName = data.studentEmail || "Student";
         }
-        // Public / cross-school: NO student PII is attached
+        
 
         items.push(item);
       }
@@ -332,11 +299,8 @@ export default function PublicLibrary() {
     }
   };
 
-  /* ────────────────────────────────────────────────────────────────
-     FILTERED DATA
-     ──────────────────────────────────────────────────────────────── */
-
-  // Species filtering
+  
+  
   const filteredSpecies = useMemo(() => {
     let result = speciesList;
     if (speciesFilter !== "all") {
@@ -354,19 +318,19 @@ export default function PublicLibrary() {
     return result;
   }, [speciesList, speciesFilter, speciesSearch]);
 
-  // Showcase filtering
+  
   const filteredShowcase = useMemo(() => {
     if (orgFilter === "all") return showcaseItems;
     return showcaseItems.filter((i) => i.orgType === orgFilter);
   }, [showcaseItems, orgFilter]);
 
-  // Resources filtering
+  
   const filteredResources = useMemo(() => {
     if (resourceFilter === "all") return resources;
     return resources.filter((r) => r.type === resourceFilter);
   }, [resources, resourceFilter]);
 
-  // Articles filtering
+  
   const articleCategories = ["All", ...new Set(articles.map((a) => a.category))];
   const filteredArticles = useMemo(() => {
     let result = articles;
@@ -376,12 +340,9 @@ export default function PublicLibrary() {
     return result;
   }, [articles, articleCategory, articleSearch]);
 
-  /* ────────────────────────────────────────────────────────────────
-     ACCESS CONTROL LOGIC FOR BOOKSHELF
-     ──────────────────────────────────────────────────────────────── */
-  const getAccessButton = useCallback((resource) => {
+    const getAccessButton = useCallback((resource) => {
     if (resource.access === "global_paid") {
-      // Paid for ALL users (per Principal's request)
+      
       return { label: `Purchase Required (${resource.price})`, className: "access-btn-paid", disabled: true, tooltip: "Advanced research — purchase required for all users" };
     }
     if (resource.access === "student_free" && isStudent) {
@@ -406,13 +367,10 @@ export default function PublicLibrary() {
     return "📚";
   };
 
-  /* ────────────────────────────────────────────────────────────────
-     RENDER
-     ──────────────────────────────────────────────────────────────── */
-  return (
+    return (
     <div className="pl-page">
       <div className="pl-container">
-        {/* ── HEADER ── */}
+        
         <header className="pl-header">
           <div className="pl-header-left">
             <div className="pl-logo-badge">🦎</div>
@@ -455,7 +413,7 @@ export default function PublicLibrary() {
           </div>
         </header>
 
-        {/* ── GUEST BANNER ── */}
+        
         {!user && (
           <div style={{
             background: "#e8f5e9", color: "#2E7D32", padding: "12px 20px",
@@ -481,7 +439,7 @@ export default function PublicLibrary() {
           </div>
         )}
 
-        {/* ── NAVIGATION TABS ── */}
+        
         <nav className="pl-tabs" role="navigation" aria-label="Library sections">
           <button
             className={`pl-tab ${activeTab === "species" ? "pl-tab-active" : ""}`}
@@ -525,9 +483,7 @@ export default function PublicLibrary() {
           </button>
         </nav>
 
-        {/* ═══════════════════════════════════════════════════════
-            TAB 1: SPECIES ENCYCLOPEDIA
-            ═══════════════════════════════════════════════════════ */}
+        
         {activeTab === "species" && (
           <section className="pl-section">
             <div className="pl-section-header">
@@ -571,8 +527,7 @@ export default function PublicLibrary() {
                 <p>Loading species data...</p>
               </div>
             ) : selectedSpecies ? (
-              /* ── Species Detail View ── */
-              <div className="species-detail" role="article" aria-label={selectedSpecies.commonName}>
+                            <div className="species-detail" role="article" aria-label={selectedSpecies.commonName}>
                 <button className="species-detail-back" onClick={() => setSelectedSpecies(null)}>
                   ← Back to All Species
                 </button>
@@ -632,8 +587,7 @@ export default function PublicLibrary() {
                 </div>
               </div>
             ) : (
-              /* ── Species Card Grid ── */
-              <div className="species-grid">
+                            <div className="species-grid">
                 {filteredSpecies.length === 0 ? (
                   <div className="pl-empty">
                     <p>No species found matching your search. Try different keywords.</p>
@@ -671,9 +625,7 @@ export default function PublicLibrary() {
           </section>
         )}
 
-        {/* ═══════════════════════════════════════════════════════
-            TAB 2: ORGANIZATIONAL SHOWCASE (Schools vs. Communities)
-            ═══════════════════════════════════════════════════════ */}
+        
         {activeTab === "showcase" && (
           <section className="pl-section">
             <div className="pl-section-header">
@@ -683,7 +635,7 @@ export default function PublicLibrary() {
               </p>
             </div>
 
-            {/* Privacy notice — always visible */}
+            
             <div className="pl-privacy-notice" role="alert">
               <span className="privacy-icon">🔒</span>
               <div>
@@ -749,7 +701,7 @@ export default function PublicLibrary() {
                       <p className="showcase-card-desc">{item.description}</p>
 
                       <div className="showcase-card-footer">
-                        {/* SCHOOL: Show school name, optionally student if same-school */}
+                        
                         {item.orgType === "school" && (
                           <div className="showcase-org-name" title={item.contributorName ? "" : "Student identity protected"}>
                             <span>🏫 {item.orgName}</span>
@@ -761,7 +713,7 @@ export default function PublicLibrary() {
                           </div>
                         )}
 
-                        {/* COMMUNITY: Show contributor name + profile */}
+                        
                         {item.orgType === "community" && (
                           <div className="showcase-contributor">
                             <span className="showcase-contributor-name">
@@ -791,9 +743,7 @@ export default function PublicLibrary() {
           </section>
         )}
 
-        {/* ═══════════════════════════════════════════════════════
-            TAB 3: DIGITAL BOOKSHELF & RESOURCES (Tiered Access)
-            ═══════════════════════════════════════════════════════ */}
+        
         {activeTab === "bookshelf" && (
           <section className="pl-section">
             <div className="pl-section-header">
@@ -806,7 +756,7 @@ export default function PublicLibrary() {
               </p>
             </div>
 
-            {/* Access key legend */}
+            
             <div className="bookshelf-legend">
               <span className="legend-item">
                 <span className="legend-dot legend-dot-free"></span>
@@ -897,9 +847,7 @@ export default function PublicLibrary() {
           </section>
         )}
 
-        {/* ═══════════════════════════════════════════════════════
-            TAB 4: EDUCATIONAL ARTICLES
-            ═══════════════════════════════════════════════════════ */}
+        
         {activeTab === "articles" && (
           <section className="pl-section">
             <div className="pl-section-header">
@@ -980,9 +928,7 @@ export default function PublicLibrary() {
           </section>
         )}
 
-        {/* ═══════════════════════════════════════════════════════
-            TAB 5: SUPPORT US — DONATION / FUNDRAISER
-            ═══════════════════════════════════════════════════════ */}
+        
         {activeTab === "donate" && (
           <section className="pl-section">
             <div className="pl-section-header">
@@ -994,7 +940,7 @@ export default function PublicLibrary() {
             </div>
 
             <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "2rem", padding: "1.5rem 0" }}>
-              {/* Impact highlights */}
+              
               <div style={{ display: "flex", gap: "1.5rem", flexWrap: "wrap", justifyContent: "center", maxWidth: "800px" }}>
                 {[
                   { icon: "🌿", title: "Platform Growth", desc: "Fund new features that empower students and researchers." },
@@ -1028,7 +974,7 @@ export default function PublicLibrary() {
                 ))}
               </div>
 
-              {/* GoFundMe widget */}
+              
               <div style={{ width: "100%", maxWidth: "700px" }}>
                 <FundraiserWidget />
               </div>
@@ -1036,7 +982,7 @@ export default function PublicLibrary() {
           </section>
         )}
 
-        {/* ── FOOTER ── */}
+        
         <footer className="pl-footer">
           <p>© 2024–2026 Komodo Hub — Indonesian Endangered Species Conservation Platform</p>
           <p className="pl-footer-note">

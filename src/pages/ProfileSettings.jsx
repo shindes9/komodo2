@@ -26,16 +26,6 @@ const colorOptions = [
   { name: "Deep Purple", value: "#6A1B9A" },
 ];
 
-/**
- * ProfileSettings — Universal profile editor for ALL roles.
- * 
- * Fields:
- *  - displayName (editable)
- *  - bio (editable, textarea)
- *  - avatar emoji picker
- *  - accentColor picker
- *  - email (read-only)
- */
 export default function ProfileSettings() {
   const { user, role } = useAuth();
   const [displayName, setDisplayName] = useState("");
@@ -125,7 +115,7 @@ export default function ProfileSettings() {
           <p className="ps-loading">Loading profile...</p>
         ) : (
           <div className="ps-form">
-            {/* Avatar picker */}
+            
             <div className="ps-field">
               <label>Avatar</label>
               <div className="ps-avatar-options">
@@ -142,7 +132,7 @@ export default function ProfileSettings() {
               </div>
             </div>
 
-            {/* Display name */}
+            
             <div className="ps-field">
               <label>Display Name</label>
               <input
@@ -154,7 +144,7 @@ export default function ProfileSettings() {
               />
             </div>
 
-            {/* Bio */}
+            
             <div className="ps-field">
               <label>Bio</label>
               <textarea
@@ -166,7 +156,7 @@ export default function ProfileSettings() {
               />
             </div>
 
-            {/* Email (read-only) */}
+            
             <div className="ps-field">
               <label>Email</label>
               <input
@@ -178,7 +168,7 @@ export default function ProfileSettings() {
               <span className="ps-field-hint">Email cannot be changed.</span>
             </div>
 
-            {/* Accent color */}
+            
             <div className="ps-field">
               <label>Accent Color</label>
               <div className="ps-color-options">

@@ -13,16 +13,6 @@ import {
 } from "firebase/firestore";
 import "./MemberProfile.css";
 
-/**
- * MemberProfile — Public-facing profile for Community Members
- * 
- * Routes:
- *   /member/profile        → Self (authenticated member views own profile)
- *   /member/profile/:id    → Public view of any community member
- * 
- * Displays: name, bio, organization, and list of contributions.
- * Unlike student profiles, this is publicly accessible.
- */
 export default function MemberProfile() {
   const { id: paramId } = useParams();
   const authCtx = useAuth() || {};
@@ -111,7 +101,7 @@ export default function MemberProfile() {
   return (
     <div className="mp-page">
       <div className="mp-container">
-        {/* ── Profile Header ── */}
+        
         <div className="mp-header">
           <div className="mp-avatar">
             {profileName.charAt(0).toUpperCase()}
@@ -126,7 +116,7 @@ export default function MemberProfile() {
           </div>
         </div>
 
-        {/* ── Stats ── */}
+        
         <div className="mp-stats">
           <div className="mp-stat">
             <span className="mp-stat-number">{contributions.length}</span>
@@ -146,7 +136,7 @@ export default function MemberProfile() {
           </div>
         </div>
 
-        {/* ── Contributions ── */}
+        
         <div className="mp-contributions">
           <h3>📚 Contributions</h3>
 

@@ -33,7 +33,7 @@ export default function MemberDashboard() {
 
     const fetchData = async () => {
       try {
-        // Fetch org name
+        
         if (orgId) {
           const orgDoc = await getDoc(doc(db, "organizations", orgId));
           if (orgDoc.exists()) setOrgName(orgDoc.data().orgName || "");
@@ -79,7 +79,7 @@ export default function MemberDashboard() {
         {orgName && <p className="member-org">🏢 {orgName}</p>}
       </div>
 
-      {/* ── Stats ── */}
+      
       <div className="member-stats">
         <div className="member-stat-card">
           <div className="stat-icon">📝</div>
@@ -98,7 +98,7 @@ export default function MemberDashboard() {
         </div>
       </div>
 
-      {/* ── Contribution Form ── */}
+      
       <div className="member-section">
         <div className="section-header-row">
           <h3>📝 Submit Contribution</h3>
@@ -111,7 +111,7 @@ export default function MemberDashboard() {
         </div>
       </div>
 
-      {/* ── My Contributions ── */}
+      
       <div className="member-section">
         <h3>📚 My Contributions</h3>
 
@@ -142,7 +142,7 @@ export default function MemberDashboard() {
         )}
       </div>
 
-      {/* ── Quick Actions ── */}
+      
       <div className="member-section">
         <h3>Quick Actions</h3>
         <div className="quick-actions">

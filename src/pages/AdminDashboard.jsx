@@ -22,7 +22,7 @@ const PROGRAMS = {
 export default function AdminDashboard({ initialTab }) {
   const { user, userData } = useAuth();
 
-  // ── Data state ──
+  
   const [schools, setSchools] = useState([]);
   const [organizations, setOrganizations] = useState([]);
   const [users, setUsers] = useState([]);
@@ -31,21 +31,21 @@ export default function AdminDashboard({ initialTab }) {
   const [enrollments, setEnrollments] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // ── Navigation ──
+  
   const [activeTab, setActiveTab] = useState(initialTab || "overview");
 
-  // ── School detail ──
+  
   const [selectedSchool, setSelectedSchool] = useState(null);
 
-  // ── Community detail ──
+  
   const [selectedOrg, setSelectedOrg] = useState(null);
 
-  // ── Users tab ──
+  
   const [userSearch, setUserSearch] = useState("");
   const [userRoleFilter, setUserRoleFilter] = useState("all");
   const [userOrgFilter, setUserOrgFilter] = useState("all");
 
-  // ── Public Library tab ──
+  
   const [showcaseItems, setShowcaseItems] = useState([]);
   const [loadingShowcase, setLoadingShowcase] = useState(false);
   const [showcaseSearch, setShowcaseSearch] = useState("");
@@ -57,7 +57,7 @@ export default function AdminDashboard({ initialTab }) {
     weekday: "long", year: "numeric", month: "long", day: "numeric",
   });
 
-  // ── Fetch all data ──
+  
   const fetchAllData = useCallback(async () => {
     setLoading(true);
     try {
@@ -92,12 +92,12 @@ export default function AdminDashboard({ initialTab }) {
 
   useEffect(() => { fetchAllData(); }, [fetchAllData]);
 
-  // Sync tab when navigating via sidebar
+  
   useEffect(() => {
     if (initialTab) setActiveTab(initialTab);
   }, [initialTab]);
 
-  // ── Fetch showcase items (public library contributions) ──
+  
   const fetchShowcase = useCallback(async () => {
     setLoadingShowcase(true);
     try {
@@ -118,7 +118,7 @@ export default function AdminDashboard({ initialTab }) {
     if (activeTab === "library") fetchShowcase();
   }, [activeTab, fetchShowcase]);
 
-  // ── Derived counts ──
+  
   const roleCounts = useMemo(() => {
     const counts = { student: 0, teacher: 0, principal: 0, chairman: 0, member: 0, admin: 0 };
     users.forEach((u) => { if (counts[u.role] !== undefined) counts[u.role]++; });
@@ -152,7 +152,7 @@ export default function AdminDashboard({ initialTab }) {
     })).sort((a, b) => b.count - a.count);
   }, [enrollments]);
 
-  // ── Helpers ──
+  
   const getSchoolName = (schoolId) => schools.find((s) => s.id === schoolId)?.schoolName || "—";
   const getOrgName = (orgId) => organizations.find((o) => o.id === orgId)?.orgName || "—";
   const getUserName = (uid) => {
@@ -168,24 +168,24 @@ export default function AdminDashboard({ initialTab }) {
   const orgUsers = (orgId) => users.filter((u) => u.orgId === orgId);
   const orgContribs = (orgId) => contributions.filter((c) => c.orgId === orgId);
 
-  // ── Actions ──
+  
   const handleDeleteSchool = async (school) => {
     setConfirmAction({
       title: "Delete School",
       message: `Are you sure you want to delete "${school.schoolName}"? This will remove the school record. Users linked to this school will lose their school association.`,
       onConfirm: async () => {
         try {
-          // Delete the school doc
+          
           await deleteDoc(doc(db, "schools", school.id));
 
-          // Remove schoolId from all users in that school
+          
           const batch = writeBatch(db);
           const affectedUsers = users.filter((u) => u.schoolId === school.id);
           affectedUsers.forEach((u) => {
             batch.update(doc(db, "users", u.id), { schoolId: null });
           });
 
-          // Deactivate access codes for this school
+          
           const codesSnap = await getDocs(
             query(collection(db, "accessCodes"), where("schoolId", "==", school.id))
           );
@@ -261,7 +261,7 @@ export default function AdminDashboard({ initialTab }) {
     });
   };
 
-  // ── Filtered users ──
+  
   const filteredUsers = useMemo(() => {
     return users.filter((u) => {
       const matchesSearch =
@@ -314,7 +314,7 @@ export default function AdminDashboard({ initialTab }) {
     });
   }, [organizations, contributions, users]);
 
-  // ── Bar chart max helpers ──
+  
   const maxProgram = Math.max(...(programEnrollments.length > 0 ? programEnrollments.map((p) => p.count) : [1]));
   const maxContribType = Math.max(...(contributionsByType.length > 0 ? contributionsByType.map((c) => c[1]) : [1]));
 
@@ -331,7 +331,7 @@ export default function AdminDashboard({ initialTab }) {
 
   return (
     <div className="admin-dashboard">
-      {/* ── Confirm Modal ── */}
+      
       {confirmAction && (
         <div className="admin-modal-overlay" onClick={() => setConfirmAction(null)}>
           <div className="admin-modal" onClick={(e) => e.stopPropagation()}>
@@ -345,7 +345,7 @@ export default function AdminDashboard({ initialTab }) {
         </div>
       )}
 
-      {/* ── Welcome ── */}
+      
       <div className="admin-welcome">
         <div className="admin-welcome-text">
           <h2>Welcome back, {userData?.displayName || user?.email}</h2>
@@ -356,7 +356,7 @@ export default function AdminDashboard({ initialTab }) {
         </div>
       </div>
 
-      {/* ── Tab Navigation ── */}
+      
       <div className="admin-tabs">
         {[
           { key: "overview", label: "Overview", icon: "📊" },
@@ -381,9 +381,7 @@ export default function AdminDashboard({ initialTab }) {
         ))}
       </div>
 
-      {/* ════════════════════════════════════════════════════════════════
-          OVERVIEW TAB
-          ════════════════════════════════════════════════════════════════ */}
+      
       {activeTab === "overview" && (
         <>
           <div className="admin-stats-grid">
@@ -431,7 +429,7 @@ export default function AdminDashboard({ initialTab }) {
             </div>
           </div>
 
-          {/* Quick role breakdown */}
+          
           <div className="admin-section">
             <h3>User Breakdown</h3>
             <div className="role-chips">
@@ -444,7 +442,7 @@ export default function AdminDashboard({ initialTab }) {
             </div>
           </div>
 
-          {/* Quick overview tables */}
+          
           <div className="admin-grid-2col">
             <div className="admin-section">
               <div className="section-header">
@@ -484,7 +482,7 @@ export default function AdminDashboard({ initialTab }) {
             </div>
           </div>
 
-          {/* Contribution status overview */}
+          
           <div className="admin-section">
             <h3>Contribution Status</h3>
             <div className="status-bar-container">
@@ -515,9 +513,7 @@ export default function AdminDashboard({ initialTab }) {
         </>
       )}
 
-      {/* ════════════════════════════════════════════════════════════════
-          SCHOOLS TAB
-          ════════════════════════════════════════════════════════════════ */}
+      
       {activeTab === "schools" && !selectedSchool && (
         <div className="admin-section">
           <div className="section-header">
@@ -563,7 +559,7 @@ export default function AdminDashboard({ initialTab }) {
         </div>
       )}
 
-      {/* ── School Detail View ── */}
+      
       {activeTab === "schools" && selectedSchool && (
         <div className="detail-view">
           <button className="btn-back" onClick={() => setSelectedSchool(null)}>
@@ -579,7 +575,7 @@ export default function AdminDashboard({ initialTab }) {
             <button className="btn-delete-lg" onClick={() => handleDeleteSchool(selectedSchool)}>Delete School</button>
           </div>
 
-          {/* School stats */}
+          
           <div className="detail-stats">
             <div className="detail-stat-card">
               <span className="detail-stat-num">{schoolUsers(selectedSchool.id).filter((u) => u.role === "student").length}</span>
@@ -607,7 +603,7 @@ export default function AdminDashboard({ initialTab }) {
             </div>
           </div>
 
-          {/* School users table */}
+          
           <div className="admin-section">
             <h3>Registered Users ({schoolUsers(selectedSchool.id).length})</h3>
             {schoolUsers(selectedSchool.id).length === 0 ? (
@@ -632,7 +628,7 @@ export default function AdminDashboard({ initialTab }) {
             )}
           </div>
 
-          {/* School contributions table */}
+          
           <div className="admin-section">
             <h3>Contributions ({schoolContribs(selectedSchool.id).length})</h3>
             {schoolContribs(selectedSchool.id).length === 0 ? (
@@ -659,7 +655,7 @@ export default function AdminDashboard({ initialTab }) {
             )}
           </div>
 
-          {/* School classes table */}
+          
           <div className="admin-section">
             <h3>Classes ({schoolClasses(selectedSchool.id).length})</h3>
             {schoolClasses(selectedSchool.id).length === 0 ? (
@@ -684,9 +680,7 @@ export default function AdminDashboard({ initialTab }) {
         </div>
       )}
 
-      {/* ════════════════════════════════════════════════════════════════
-          COMMUNITIES TAB
-          ════════════════════════════════════════════════════════════════ */}
+      
       {activeTab === "communities" && !selectedOrg && (
         <div className="admin-section">
           <div className="section-header">
@@ -728,7 +722,7 @@ export default function AdminDashboard({ initialTab }) {
         </div>
       )}
 
-      {/* ── Community Detail View ── */}
+      
       {activeTab === "communities" && selectedOrg && (
         <div className="detail-view">
           <button className="btn-back" onClick={() => setSelectedOrg(null)}>
@@ -763,7 +757,7 @@ export default function AdminDashboard({ initialTab }) {
             </div>
           </div>
 
-          {/* Community users */}
+          
           <div className="admin-section">
             <h3>Members ({orgUsers(selectedOrg.id).length})</h3>
             {orgUsers(selectedOrg.id).length === 0 ? (
@@ -788,7 +782,7 @@ export default function AdminDashboard({ initialTab }) {
             )}
           </div>
 
-          {/* Community contributions */}
+          
           <div className="admin-section">
             <h3>Contributions ({orgContribs(selectedOrg.id).length})</h3>
             {orgContribs(selectedOrg.id).length === 0 ? (
@@ -817,9 +811,7 @@ export default function AdminDashboard({ initialTab }) {
         </div>
       )}
 
-      {/* ════════════════════════════════════════════════════════════════
-          USERS TAB
-          ════════════════════════════════════════════════════════════════ */}
+      
       {activeTab === "users" && (
         <div className="admin-section">
           <div className="section-header">
@@ -891,9 +883,7 @@ export default function AdminDashboard({ initialTab }) {
         </div>
       )}
 
-      {/* ════════════════════════════════════════════════════════════════
-          PUBLIC LIBRARY TAB (Manage Showcase)
-          ════════════════════════════════════════════════════════════════ */}
+      
       {activeTab === "library" && (
         <div className="admin-section">
           <div className="section-header">
@@ -947,12 +937,10 @@ export default function AdminDashboard({ initialTab }) {
         </div>
       )}
 
-      {/* ════════════════════════════════════════════════════════════════
-          ANALYTICS TAB
-          ════════════════════════════════════════════════════════════════ */}
+      
       {activeTab === "analytics" && (
         <>
-          {/* Platform Overview */}
+          
           <div className="admin-section">
             <h3>Platform Overview</h3>
             <div className="analytics-metrics">
@@ -983,7 +971,7 @@ export default function AdminDashboard({ initialTab }) {
             </div>
           </div>
 
-          {/* User Role Distribution */}
+          
           <div className="admin-section">
             <h3>User Role Distribution</h3>
             <div className="role-distribution">
@@ -1002,7 +990,7 @@ export default function AdminDashboard({ initialTab }) {
             </div>
           </div>
 
-          {/* Contributions by Type */}
+          
           <div className="admin-section">
             <h3>Contributions by Type</h3>
             {contributionsByType.length === 0 ? (
@@ -1022,7 +1010,7 @@ export default function AdminDashboard({ initialTab }) {
             )}
           </div>
 
-          {/* Program Enrollments */}
+          
           <div className="admin-section">
             <h3>Program Enrollments</h3>
             {programEnrollments.length === 0 ? (
@@ -1042,7 +1030,7 @@ export default function AdminDashboard({ initialTab }) {
             )}
           </div>
 
-          {/* Per-School Analytics */}
+          
           <div className="admin-section">
             <h3>Contributions by School</h3>
             {schoolContribStats.length === 0 ? (
@@ -1071,7 +1059,7 @@ export default function AdminDashboard({ initialTab }) {
             )}
           </div>
 
-          {/* Per-Community Analytics */}
+          
           <div className="admin-section">
             <h3>Contributions by Community</h3>
             {orgContribStats.length === 0 ? (

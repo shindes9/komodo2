@@ -5,18 +5,6 @@ import { db } from "../firebase";
 import { collection, getDocs, query, where, orderBy, doc, getDoc } from "firebase/firestore";
 import "./SchoolLibrary.css";
 
-/**
- * SchoolLibrary — Visibility Matrix
- * 
- * PUBLIC VIEW (no auth / public / community role):
- *   - Shows: content, description, schoolName, type, date, photoURL
- *   - STRIPS: studentName, studentEmail, studentId, studentProfile
- *   - Only shows contributions with isPublic === true
- * 
- * INTERNAL VIEW (student / teacher / principal / admin):
- *   - Shows: full details including student name, email, timestamp
- *   - Shows all contributions from their schoolId
- */
 export default function SchoolLibrary() {
   const { user, role, schoolId } = useAuth();
   const navigate = useNavigate();
@@ -36,23 +24,23 @@ export default function SchoolLibrary() {
       let contribItems = [];
 
       if (isPublicVisitor) {
-        // ── PUBLIC VIEW ──
-        // Only show contributions published to public (teacher-gated)
-        // CRITICALLY: strip all student PII
+        
+        
+        
         const publicQ = query(
           collection(db, "contributions"),
           where("isVisibleToPublic", "==", true)
         );
         const publicSnap = await getDocs(publicQ);
 
-        // Build a cache of school names for display
+        
         const schoolCache = {};
 
         contribItems = await Promise.all(
           publicSnap.docs.map(async (d) => {
             const data = d.data();
 
-            // Fetch school name if not cached
+            
             let schoolName = "Unknown School";
             if (data.schoolId) {
               if (schoolCache[data.schoolId]) {
@@ -65,16 +53,16 @@ export default function SchoolLibrary() {
                     schoolCache[data.schoolId] = schoolName;
                   }
                 } catch {
-                  // keep default
+                  
                 }
               }
             }
 
-            // ╔══════════════════════════════════════════════════╗
-            // ║  PRIVACY FILTER: Strip ALL student PII fields   ║
-            // ║  studentName, studentEmail, studentId,           ║
-            // ║  studentProfile are NEVER included              ║
-            // ╚══════════════════════════════════════════════════╝
+            
+            
+            
+            
+            
             return {
               id: d.id,
               title: data.title || `${data.species || "Unknown"} Sighting`,
@@ -91,8 +79,8 @@ export default function SchoolLibrary() {
           })
         );
       } else if (schoolId) {
-        // ── INTERNAL VIEW ──
-        // Only show contributions that teacher has published to school library
+        
+        
         const schoolQ = query(
           collection(db, "contributions"),
           where("schoolId", "==", schoolId),
@@ -100,7 +88,7 @@ export default function SchoolLibrary() {
         );
         const schoolSnap = await getDocs(schoolQ);
 
-        // Get school name for display
+        
         let schoolName = "";
         try {
           const schoolDoc = await getDoc(doc(db, "schools", schoolId));
@@ -133,7 +121,7 @@ export default function SchoolLibrary() {
           };
         });
       } else {
-        // Fallback: no school (shouldn't happen for auth users normally)
+        
         const allQ = query(collection(db, "sightings"), orderBy("createdAt", "desc"));
         const allSnap = await getDocs(allQ);
         contribItems = allSnap.docs.map((d) => {
@@ -246,15 +234,15 @@ export default function SchoolLibrary() {
                   <div className="sl-list-item-title">{item.title}</div>
                   <div className="sl-list-item-meta">
                     <span className="sl-list-type">{item.type}</span>
-                    {/* Only show author for internal (non-public) users */}
+                    
                     {!isPublicVisitor && (
                       <span className="sl-list-author">{item.anonymousName}</span>
                     )}
-                    {/* Show school name for public visitors */}
+                    
                     {isPublicVisitor && item.schoolName && (
                       <span className="sl-list-author">{item.schoolName}</span>
                     )}
-                    {/* Published/Internal badge */}
+                    
                     {!isPublicVisitor && item.isPublished && (
                       <span style={{ fontSize: "10px", background: "#e3f2fd", color: "#1565c0", padding: "2px 6px", borderRadius: "6px", fontWeight: 600 }}>
                         Published
@@ -278,11 +266,11 @@ export default function SchoolLibrary() {
                 <h2>{selectedItem.title}</h2>
                 <div className="sl-reader-meta">
                   <span className="sl-reader-type">{selectedItem.type}</span>
-                  {/* PUBLIC: show school name, NOT student identity */}
+                  
                   {isPublicVisitor && selectedItem.schoolName && (
                     <span className="sl-reader-author">From: {selectedItem.schoolName}</span>
                   )}
-                  {/* INTERNAL: show student email */}
+                  
                   {!isPublicVisitor && (
                     <span className="sl-reader-author">{selectedItem.anonymousName}</span>
                   )}

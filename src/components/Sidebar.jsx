@@ -6,14 +6,7 @@ import { useAuth } from "../context/AuthContext";
 import { collection, query, where, getDocs } from "firebase/firestore";
 import "./Sidebar.css";
 
-/**
- * Sidebar Navigation — RBAC-aware
- *
- * Dynamically shows/hides tabs based on user role.
- * For students: includes "My Canvas" summary with contribution stats.
- */
 
-/** Map role to its home dashboard path */
 const roleDashboardPath = {
   student: "/student",
   teacher: "/teacher",
@@ -140,7 +133,7 @@ export default function Sidebar() {
         <span className="sidebar-title">Komodo Hub</span>
       </div>
 
-      {/* My Canvas Stats for students/members */}
+      
       {showCanvasStats && (
         <div className="sidebar-canvas-stats">
           <div className="sidebar-canvas-title">My Canvas</div>

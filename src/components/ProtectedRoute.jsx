@@ -1,7 +1,7 @@
 import { Navigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 
-// Maps each role to its home dashboard path
+
 const ROLE_HOME = {
   student: "/student",
   teacher: "/teacher",
@@ -57,7 +57,7 @@ export default function ProtectedRoute({ children, allowedRoles }) {
   }
 
   if (allowedRoles && !allowedRoles.includes(role)) {
-    // Redirect to the user's own dashboard instead of showing "Access Denied"
+    
     const redirect = role ? (ROLE_HOME[role] || "/") : "/";
     return <Navigate to={redirect} replace />;
   }

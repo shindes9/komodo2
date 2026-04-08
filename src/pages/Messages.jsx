@@ -17,14 +17,6 @@ import {
 import { createNotification, markMessageNotificationsRead } from "../utils/notifications";
 import "./Messages.css";
 
-/**
- * RBAC-enforced Internal Messaging System
- *
- * Students  : message teachers & classmates within the same schoolId
- * Teachers  : message students in their classes + principal & other teachers at their school
- * Principals: message all teachers at their school
- * Security  : cross-school messaging is blocked; community/public have no access.
- */
 export default function Messages() {
   const { user, userData, role, schoolId, orgId, classIds } = useAuth();
   const navigate = useNavigate();
@@ -52,14 +44,14 @@ export default function Messages() {
   const isSchoolUser = role === "student" || role === "teacher" || role === "principal";
   const isCommunityUser = role === "chairman" || role === "member";
 
-  // Only block public visitors and admin (admin has no messaging per spec)
+  
   const isBlocked = !user || role === "public";
 
-  // ────────────────────────────────────────────────────────────────
-  // Listener 1: all messages involving current user → conversations list
-  // Uses or() for broad fetch; no orderBy so no composite-index required.
-  // We sort client-side after merging.
-  // ────────────────────────────────────────────────────────────────
+  
+  
+  
+  
+  
   useEffect(() => {
     if (!user || isBlocked) return;
 
@@ -74,7 +66,7 @@ export default function Messages() {
     const unsub = onSnapshot(q, (snapshot) => {
       const allMessages = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
 
-      // Group by other participant to build conversation list
+      
       const convMap = {};
       allMessages.forEach((msg) => {
         const otherId =
@@ -164,7 +156,7 @@ export default function Messages() {
     const unsub2 = onSnapshot(recvQ, (snap) => {
       recvMsgs = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
       merge();
-      // If we receive unread messages while the chat is actively open, mark them as read immediately
+      
       if (recvMsgs.some((m) => !m.read)) {
         markMessageNotificationsRead(user.uid, selectedUserId);
       }
@@ -176,14 +168,14 @@ export default function Messages() {
     };
   }, [user?.uid, selectedUserId, isBlocked]);
 
-  // Auto-scroll to bottom whenever messages list updates
+  
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  // ────────────────────────────────────────────────────────────────
-  // RBAC contact loading
-  // ────────────────────────────────────────────────────────────────
+  
+  
+  
   const loadAvailableContacts = useCallback(async () => {
     setLoadingContacts(true);
     setAvailableContacts([]);
@@ -205,7 +197,7 @@ export default function Messages() {
       const orgMap = {};
 
       if (role === "student") {
-        // Teachers in same school
+        
         const teacherQ = query(
           collection(db, "users"),
           where("role", "==", "teacher"),
@@ -222,7 +214,7 @@ export default function Messages() {
           }
         });
 
-        // Classmates from the same classes
+        
         if (classIds && classIds.length > 0) {
           const addedStudents = new Set();
           for (const classId of classIds) {
@@ -247,7 +239,7 @@ export default function Messages() {
       } else if (role === "teacher") {
         const addedIds = new Set();
 
-        // Students in teacher's classes
+        
         if (classIds && classIds.length > 0) {
           for (const classId of classIds) {
             const memberQ = query(collection(db, "classMembers"), where("classId", "==", classId));
@@ -269,7 +261,7 @@ export default function Messages() {
           }
         }
 
-        // Principal at their school
+        
         const principalQ = query(
           collection(db, "users"),
           where("role", "==", "principal"),
@@ -285,7 +277,7 @@ export default function Messages() {
           }
         });
 
-        // Other teachers at their school
+        
         const otherTeacherQ = query(
           collection(db, "users"),
           where("role", "==", "teacher"),
@@ -301,7 +293,7 @@ export default function Messages() {
           }
         });
       } else if (role === "principal") {
-        // All teachers at their school
+        
         const teacherQ = query(
           collection(db, "users"),
           where("role", "==", "teacher"),
@@ -316,7 +308,7 @@ export default function Messages() {
           }
         });
       } else if (role === "chairman") {
-        // ── COMMUNITY: Chairman can message all members in their org ──
+        
         const memberQ = query(
           collection(db, "users"),
           where("role", "==", "member"),
@@ -331,10 +323,10 @@ export default function Messages() {
           }
         });
       } else if (role === "member") {
-        // ── COMMUNITY: Member can message chairman + other members in their org ──
+        
         const addedIds = new Set();
 
-        // Chairman
+        
         const chairQ = query(
           collection(db, "users"),
           where("role", "==", "chairman"),
@@ -350,7 +342,7 @@ export default function Messages() {
           }
         });
 
-        // Other members
+        
         const otherMemberQ = query(
           collection(db, "users"),
           where("role", "==", "member"),
@@ -377,9 +369,9 @@ export default function Messages() {
     }
   }, [user, role, schoolId, orgId, classIds, isSchoolUser, isCommunityUser]);
 
-  // ────────────────────────────────────────────────────────────────
-  // Conversation selection helpers
-  // ────────────────────────────────────────────────────────────────
+  
+  
+  
   const selectConversation = (conv) => {
     setSelectedUserId(conv.userId);
     setSelectedUserEmail(conv.email);
@@ -421,25 +413,25 @@ export default function Messages() {
       if (!receiverDoc.exists()) return "Recipient not found.";
       const receiverData = receiverDoc.data();
 
-      // School users: cross-school block
+      
       if (isSchoolUser) {
         const receiverSchoolId = contactSchoolMap[receiverId] || receiverData.schoolId;
         if (schoolId && receiverSchoolId && schoolId !== receiverSchoolId) {
           return "You cannot send messages to users outside your school.";
         }
-        // Block school→community messaging
+        
         if (receiverData.orgId && !receiverData.schoolId) {
           return "You cannot send messages to community members from a school account.";
         }
       }
 
-      // Community users: cross-org block
+      
       if (isCommunityUser) {
         const receiverOrgId = contactOrgMap[receiverId] || receiverData.orgId;
         if (orgId && receiverOrgId && orgId !== receiverOrgId) {
           return "You cannot send messages to users outside your organization.";
         }
-        // Block community→school messaging
+        
         if (receiverData.schoolId && !receiverData.orgId) {
           return "You cannot send messages to school members from a community account.";
         }
@@ -451,9 +443,9 @@ export default function Messages() {
     return null;
   };
 
-  // ────────────────────────────────────────────────────────────────
-  // Send message
-  // ────────────────────────────────────────────────────────────────
+  
+  
+  
   const handleSend = async () => {
     if (!newMessage.trim() || !selectedUserId) return;
     setSending(true);
@@ -481,7 +473,7 @@ export default function Messages() {
         read: false,
       });
 
-      // Notify recipient — include type and senderId for targeted read-trigger
+      
       createNotification(
         selectedUserId,
         `New message from ${userData?.displayName || user.email}`,
@@ -504,9 +496,9 @@ export default function Messages() {
     }
   };
 
-  // ────────────────────────────────────────────────────────────────
-  // UI helpers
-  // ────────────────────────────────────────────────────────────────
+  
+  
+  
   const formatTime = (timestamp) => {
     if (!timestamp?.seconds) return "";
     const date = new Date(timestamp.seconds * 1000);
@@ -534,9 +526,9 @@ export default function Messages() {
     role === "member" ? "/member" :
     "/student";
 
-  // ────────────────────────────────────────────────────────────────
-  // Block community / public visitors
-  // ────────────────────────────────────────────────────────────────
+  
+  
+  
   if (isBlocked) {
     return (
       <div className="messages-page">
@@ -553,7 +545,7 @@ export default function Messages() {
   return (
     <div className="messages-page">
       <div className="messages-container">
-        {/* ── Left panel: conversations ── */}
+        
         <div className="messages-sidebar">
           <div className="messages-sidebar-header">
             <button
@@ -649,7 +641,7 @@ export default function Messages() {
           </div>
         </div>
 
-        {/* ── Right panel: chat window ── */}
+        
         <div className="messages-main">
           {!selectedUserId ? (
             <div className="no-chat-selected">

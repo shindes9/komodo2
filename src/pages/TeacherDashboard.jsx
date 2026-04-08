@@ -141,7 +141,7 @@ export default function TeacherDashboard() {
           id: d.id,
           ...d.data(),
         }));
-        // Sort by timestamp descending
+        
         results.sort((a, b) => {
           const tA = a.timestamp?.seconds || 0;
           const tB = b.timestamp?.seconds || 0;
@@ -413,7 +413,7 @@ export default function TeacherDashboard() {
         )}
       </div>
 
-      {/* ── Submissions Needing Review ── */}
+      
       <div className="teacher-section">
         <div className="section-header">
           <h3>Submissions Needing Review</h3>

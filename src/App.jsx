@@ -56,7 +56,7 @@ export default function App() {
         <Route path="/public-library" element={<PublicLibrary />} />
         <Route path="/sighting/:id" element={<ContributionDetailView />} />
 
-        {/* ── Universal Routes ── */}
+        
         <Route
           path="/settings"
           element={
@@ -68,7 +68,7 @@ export default function App() {
           }
         />
 
-        {/* ── Student Routes ── */}
+        
         <Route
           path="/student"
           element={
@@ -135,7 +135,7 @@ export default function App() {
           }
         />
 
-        {/* Removed deprecated PastSubmissions route -- now captured in MyCanvas */}
+        
 
         <Route
           path="/student/quiz"
@@ -148,7 +148,7 @@ export default function App() {
           }
         />
 
-        {/* ── Teacher Routes ── */}
+        
         <Route
           path="/teacher"
           element={
@@ -226,7 +226,7 @@ export default function App() {
           }
         />
 
-        {/* ── Principal Routes ── */}
+        
         <Route
           path="/principal"
           element={
@@ -271,9 +271,9 @@ export default function App() {
           }
         />
 
-        {/* ══ COMMUNITY ROUTES ══ */}
+        
 
-        {/* Chairman Dashboard */}
+        
         <Route
           path="/community"
           element={
@@ -329,7 +329,7 @@ export default function App() {
           }
         />
 
-        {/* Member Dashboard */}
+        
         <Route
           path="/member"
           element={
@@ -387,7 +387,7 @@ export default function App() {
           }
         />
 
-        {/* Public Member Profile — no auth required */}
+        
         <Route
           path="/member/profile/:id"
           element={<MemberProfile />}
