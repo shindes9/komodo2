@@ -135,6 +135,17 @@ export function AuthProvider({ children }) {
     };
   }, []);
 
+  const logout = async () => {
+    try {
+      setLoading(true);
+      await signOut(auth);
+      window.location.replace("/");
+    } catch (error) {
+      console.error("Logout error:", error);
+      setLoading(false);
+    }
+  };
+
   return (
     <AuthContext.Provider value={{
       user,
@@ -144,6 +155,7 @@ export function AuthProvider({ children }) {
       orgId,
       classIds,
       loading,
+      logout,
       // Convenience shortcut: displayName resolves to Firestore displayName,
       // falls back to Firebase Auth displayName, then email prefix.
       displayName: userData?.displayName || user?.displayName || user?.email?.split("@")[0] || null,

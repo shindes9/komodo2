@@ -33,7 +33,7 @@ const navLinks = {
     { label: "Species Quiz", path: "/student/quiz", icon: "🎮", tooltip: "Test your species knowledge" },
     { label: "My Canvas", path: "/student/profile", icon: "\u{1F3A8}", tooltip: "View your work canvas and portfolio" },
     { label: "Settings", path: "/settings", icon: "\u{2699}\uFE0F", tooltip: "Profile settings" },
-    { label: "Public Library", path: "/student/public-library", icon: "\u{1F30D}", tooltip: "Browse the public species library and showcase" },
+    { label: "Public Library", path: "/public-library", icon: "\u{1F30D}", tooltip: "Browse the public species library and showcase" },
   ],
   teacher: [
     { label: "Dashboard", path: "/teacher", icon: "\u{1F3E0}", tooltip: "View your teacher dashboard" },
@@ -41,14 +41,14 @@ const navLinks = {
     { label: "School Library", path: "/teacher/school-library", icon: "\u{1F4D6}", tooltip: "Browse your school's contribution library" },
     { label: "Messages", path: "/teacher/messages", icon: "\u{2709}\uFE0F", tooltip: "Message students and principal at your school" },
     { label: "Settings", path: "/settings", icon: "\u{2699}\uFE0F", tooltip: "Profile settings" },
-    { label: "Public Library", path: "/teacher/public-library", icon: "\u{1F30D}", tooltip: "Browse the public species library and showcase" },
+    { label: "Public Library", path: "/public-library", icon: "\u{1F30D}", tooltip: "Browse the public species library and showcase" },
   ],
   principal: [
     { label: "Dashboard", path: "/principal", icon: "\u{1F3E0}", tooltip: "Manage your school overview" },
     { label: "School Library", path: "/principal/library", icon: "\u{1F4D6}", tooltip: "View all student contributions at your school" },
     { label: "Messages", path: "/principal/messages", icon: "\u{2709}\uFE0F", tooltip: "Message teachers at your school" },
     { label: "Settings", path: "/settings", icon: "\u{2699}\uFE0F", tooltip: "Profile settings" },
-    { label: "Public Library", path: "/principal/public-library", icon: "\u{1F30D}", tooltip: "Browse the public species library and showcase" },
+    { label: "Public Library", path: "/public-library", icon: "\u{1F30D}", tooltip: "Browse the public species library and showcase" },
   ],
   chairman: [
     { label: "Dashboard", path: "/community", icon: "\u{1F3E0}", tooltip: "Manage your community organization" },
@@ -56,7 +56,7 @@ const navLinks = {
     { label: "Community Library", path: "/community/library", icon: "\u{1F4D6}", tooltip: "View all member contributions" },
     { label: "Messages", path: "/community/messages", icon: "\u{2709}\uFE0F", tooltip: "Message community members" },
     { label: "Settings", path: "/settings", icon: "\u{2699}\uFE0F", tooltip: "Profile settings" },
-    { label: "Public Library", path: "/community/public-library", icon: "\u{1F30D}", tooltip: "Browse the public species library and showcase" },
+    { label: "Public Library", path: "/public-library", icon: "\u{1F30D}", tooltip: "Browse the public species library and showcase" },
   ],
   member: [
     { label: "Dashboard", path: "/member", icon: "\u{1F3E0}", tooltip: "View your member dashboard" },
@@ -65,7 +65,7 @@ const navLinks = {
     { label: "My Canvas", path: "/member/profile", icon: "\u{1F3A8}", tooltip: "View your public canvas" },
     { label: "Messages", path: "/member/messages", icon: "\u{2709}\uFE0F", tooltip: "Message community members" },
     { label: "Settings", path: "/settings", icon: "\u{2699}\uFE0F", tooltip: "Profile settings" },
-    { label: "Public Library", path: "/member/public-library", icon: "\u{1F30D}", tooltip: "Browse the public species library and showcase" },
+    { label: "Public Library", path: "/public-library", icon: "\u{1F30D}", tooltip: "Browse the public species library and showcase" },
   ],
   admin: [
     { label: "Dashboard", path: "/admin", icon: "\u{1F3E0}", tooltip: "Platform-wide admin dashboard" },
@@ -74,7 +74,7 @@ const navLinks = {
     { label: "Users", path: "/admin/users", icon: "\u{1F465}", tooltip: "View all registered users" },
     { label: "Manage Library", path: "/admin/manage-library", icon: "\u{1F4DA}", tooltip: "Manage public library showcase" },
     { label: "Analytics", path: "/admin/analytics", icon: "\u{1F4C8}", tooltip: "Platform-wide analytics" },
-    { label: "Public Library", path: "/admin/public-library", icon: "\u{1F30D}", tooltip: "Browse the public species library and showcase" },
+    { label: "Public Library", path: "/public-library", icon: "\u{1F30D}", tooltip: "Browse the public species library and showcase" },
     { label: "Settings", path: "/settings", icon: "\u{2699}\uFE0F", tooltip: "Profile settings" },
   ],
 };
@@ -82,7 +82,7 @@ const navLinks = {
 export default function Sidebar() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { user, displayName, role } = useAuth();
+  const { user, displayName, role, logout } = useAuth();
 
   const [totalContributions, setTotalContributions] = useState(0);
   const [reviewedCount, setReviewedCount] = useState(0);
@@ -116,11 +116,15 @@ export default function Sidebar() {
   }, [user, showCanvasStats]);
 
   const handleLogout = async () => {
-    try {
-      await signOut(auth);
-      navigate("/", { replace: true });
-    } catch (err) {
-      console.error("Logout failed:", err);
+    if (logout) {
+      await logout();
+    } else {
+      try {
+        await signOut(auth);
+        window.location.replace("/");
+      } catch (err) {
+        console.error("Logout failed:", err);
+      }
     }
   };
 

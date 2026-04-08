@@ -135,17 +135,6 @@ export default function App() {
           }
         />
 
-        <Route
-          path="/student/public-library"
-          element={
-            <ProtectedRoute allowedRoles={["student"]}>
-              <DashboardLayout title="Public Library">
-                <PublicLibrary />
-              </DashboardLayout>
-            </ProtectedRoute>
-          }
-        />
-
         {/* Removed deprecated PastSubmissions route -- now captured in MyCanvas */}
 
         <Route
@@ -227,17 +216,6 @@ export default function App() {
         />
 
         <Route
-          path="/teacher/public-library"
-          element={
-            <ProtectedRoute allowedRoles={["teacher"]}>
-              <DashboardLayout title="Public Library">
-                <PublicLibrary />
-              </DashboardLayout>
-            </ProtectedRoute>
-          }
-        />
-
-        <Route
           path="/teacher/profile"
           element={
             <ProtectedRoute allowedRoles={["teacher"]}>
@@ -277,17 +255,6 @@ export default function App() {
             <ProtectedRoute allowedRoles={["principal"]}>
               <DashboardLayout title="Messages">
                 <Messages />
-              </DashboardLayout>
-            </ProtectedRoute>
-          }
-        />
-
-        <Route
-          path="/principal/public-library"
-          element={
-            <ProtectedRoute allowedRoles={["principal"]}>
-              <DashboardLayout title="Public Library">
-                <PublicLibrary />
               </DashboardLayout>
             </ProtectedRoute>
           }
@@ -362,17 +329,6 @@ export default function App() {
           }
         />
 
-        <Route
-          path="/community/public-library"
-          element={
-            <ProtectedRoute allowedRoles={["chairman"]}>
-              <DashboardLayout title="Public Library">
-                <PublicLibrary />
-              </DashboardLayout>
-            </ProtectedRoute>
-          }
-        />
-
         {/* Member Dashboard */}
         <Route
           path="/member"
@@ -426,17 +382,6 @@ export default function App() {
             <ProtectedRoute allowedRoles={["member"]}>
               <DashboardLayout title="My Canvas">
                 <MyCanvas />
-              </DashboardLayout>
-            </ProtectedRoute>
-          }
-        />
-
-        <Route
-          path="/member/public-library"
-          element={
-            <ProtectedRoute allowedRoles={["member"]}>
-              <DashboardLayout title="Public Library">
-                <PublicLibrary />
               </DashboardLayout>
             </ProtectedRoute>
           }
@@ -509,17 +454,6 @@ export default function App() {
             <ProtectedRoute allowedRoles={["admin"]}>
               <DashboardLayout title="Platform Analytics">
                 <AdminDashboard initialTab="analytics" />
-              </DashboardLayout>
-            </ProtectedRoute>
-          }
-        />
-
-        <Route
-          path="/admin/public-library"
-          element={
-            <ProtectedRoute allowedRoles={["admin"]}>
-              <DashboardLayout title="Public Library">
-                <PublicLibrary />
               </DashboardLayout>
             </ProtectedRoute>
           }

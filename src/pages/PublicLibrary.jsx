@@ -126,12 +126,28 @@ export default function PublicLibrary() {
   const navigate = useNavigate();
 
   // useAuth may be null for public visitors — safe optional access
-  let authCtx = { user: null, role: null, schoolId: null, orgId: null };
+  let authCtx = { user: null, role: null, schoolId: null, orgId: null, loading: false };
   try { authCtx = useAuth() || authCtx; } catch { /* public visitor */ }
-  const { user, role, schoolId: userSchoolId, orgId: userOrgId } = authCtx;
+  const { user, role, schoolId: userSchoolId, orgId: userOrgId, loading } = authCtx;
 
   const isStudent = role === "student";
   const isLoggedIn = !!user;
+
+  if (loading) {
+    return (
+      <div className="pl-page" style={{ justifyContent: "center", alignItems: "center", display: "flex", minHeight: "100vh" }}>
+        <div style={{
+          width: 48,
+          height: 48,
+          border: "5px solid #c8e6c9",
+          borderTopColor: "#2E7D32",
+          borderRadius: "50%",
+          animation: "plSpinner 0.9s linear infinite",
+        }}></div>
+        <style>{`@keyframes plSpinner { to { transform: rotate(360deg); } }`}</style>
+      </div>
+    );
+  }
 
   /* ── Tab state ── */
   const [activeTab, setActiveTab] = useState("species");
@@ -438,6 +454,32 @@ export default function PublicLibrary() {
             )}
           </div>
         </header>
+
+        {/* ── GUEST BANNER ── */}
+        {!user && (
+          <div style={{
+            background: "#e8f5e9", color: "#2E7D32", padding: "12px 20px",
+            borderRadius: "8px", margin: "0 24px 20px", display: "flex", gap: "12px",
+            alignItems: "center", border: "1px solid #c8e6c9"
+          }}>
+            <span style={{ fontSize: "20px" }}>👋</span>
+            <div style={{ flex: 1 }}>
+              <strong>Welcome, Guest!</strong>
+              <p style={{ margin: "4px 0 0", fontSize: "14px", color: "#4f6f52" }}>
+                You're viewing the public encyclopedia. Sign in to access your school or community's exclusive wildlife contributions and resources.
+              </p>
+            </div>
+            <button
+              onClick={() => navigate("/auth")}
+              style={{
+                background: "#2E7D32", color: "white", padding: "8px 16px",
+                borderRadius: "6px", border: "none", cursor: "pointer", fontWeight: 600
+              }}
+            >
+              Sign In
+            </button>
+          </div>
+        )}
 
         {/* ── NAVIGATION TABS ── */}
         <nav className="pl-tabs" role="navigation" aria-label="Library sections">

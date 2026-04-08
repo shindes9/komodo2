@@ -198,7 +198,7 @@ export default function LandingPage() {
           <div className="landing-species-cta-wrap">
             <button
               className="landing-species-cta"
-              onClick={() => navigate("/library")}
+              onClick={() => navigate("/public-library")}
             >
               View Full Encyclopedia
             </button>
@@ -258,7 +258,7 @@ export default function LandingPage() {
       <footer className="landing-footer">
         <div className="landing-footer-inner">
           <div className="landing-footer-links">
-            <button className="landing-footer-link" onClick={() => navigate("/library")}>
+            <button className="landing-footer-link" onClick={() => navigate("/public-library")}>
               Public Library
             </button>
             <button className="landing-footer-link" onClick={() => navigate("/auth")}>
